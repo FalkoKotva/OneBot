@@ -18,6 +18,6 @@ class Cog(commands.Cog):
     async def on_ready(self):
         """
         Method called when the cog has been loaded.
+        Prints a ready message to the console.
         """
-        output = f'Loaded Cog (NAME: {self.__class__.__name__})'
-        print(output)
+        print(f'Loaded Cog (NAME: {self.__class__.__name__})')
