@@ -1,5 +1,9 @@
 """
 Entry point for the bot. Run this file to get things started.
+
+I am unable to use logging with this bot because the code runs asynchronously
+which is not supported by the built-in logging library. As a substititue until
+I find a better solution, I will be using print functions.
 """
 
 import os
@@ -28,6 +32,7 @@ async def main():
     async def on_ready():
         """
         Automatically called when the bot is ready.
+        Prints a ready message to the console.
         """
         output = f'Logged in as {bot.user} (ID: {bot.user.id})'
         print(output)
