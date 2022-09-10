@@ -168,7 +168,7 @@ class Tickets(Cog):
         self,
         interaction:discord.Interaction,
         *, suggestion:str
-        ):
+    ):
         """
         Suggest a feature for the server
         """
@@ -184,7 +184,7 @@ class Tickets(Cog):
         interaction: discord.Interaction,
         accusing:discord.Member,
         *, reason: str
-        ):
+    ):
         """
         Report a user for misbehaviour or bullying
         """
@@ -194,6 +194,37 @@ class Tickets(Cog):
             accusing,
             reason
         )
+    
+    @group.command(name='close')
+    async def close_ticket(
+        self,
+        interaction:discord.Interaction,
+        ticket_type:TicketType,
+        ticket_id:int
+    ):
+        """
+        Close a ticket
+        """
+        
+        if ticket_type == TicketType.REPORT:
+            table = 'user_report_tickets'
+        else:
+            table = 'user_suggestion_tickets'
+            
+        # Check that the ticket exists
+        async with aiosqlite.connect(DATABASE) as db:
+            try:
+                found_id = await db.execute_fetchall('SELECT ticketId FROM {0} WHERE ticketId=?'.format(table), (ticket_id,))
+                found_id = found_id[0][0]
+            except IndexError:
+                await interaction.response.send_message(f'There are no {ticket_type.name.lower()} tickets with the id: {ticket_id}', ephemeral=True)
+                return        
+        
+        async with aiosqlite.connect(DATABASE) as db:
+            await db.execute('DELETE FROM {0} WHERE ticketId=?'.format(table), (ticket_id,))
+            await db.commit()
+
+        await interaction.response.send_message('Ticket closed', ephemeral=True)
 
 
 async def setup(bot):
