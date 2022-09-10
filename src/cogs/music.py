@@ -124,10 +124,14 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 except IndexError:
                     raise YTDLError('Couldn\'t retrieve any matches for `{}`'.format(webpage_url))
 
-        return cls(ctx, discord.FFmpegPCMAudio(info['url'], **cls.FFMPEG_OPTIONS, executable='bin/ffmpeg.exe'), data=info)
+        return cls(ctx, discord.FFmpegPCMAudio(info['url'], **cls.FFMPEG_OPTIONS, executable='ffmpeg/ffmpeg.exe'), data=info)
 
     @staticmethod
     def parse_duration(duration: int):
+        
+        if duration == 0:
+            return 'LIVE STREAM'
+        
         minutes, seconds = divmod(duration, 60)
         hours, minutes = divmod(minutes, 60)
         days, hours = divmod(hours, 24)
@@ -143,7 +147,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
             duration.append('{} seconds'.format(seconds))
 
         return ', '.join(duration)
-
 
 class Song:
     __slots__ = ('source', 'requester')
@@ -487,9 +490,25 @@ class Music(Cog):
                 await ctx.send('An error occurred while processing this request: {}'.format(str(e)))
             else:
                 song = Song(source)
+                
+                embed = discord.Embed(
+                    title='Added Track',
+                    colour=discord.Colour.blue(),
+                    description=source.title,
+                    url=source.url
+                )
+                embed.add_field(name='Estimated time until played', value='placeholder')
+                embed.add_field(name='Track Length', value=source.duration)
+                embed.add_field(name='\u200B', value='\u200B')
+                embed.add_field(name='Position in upcoming', value='placeholder')
+                embed.add_field(name='Position in queue', value='placeholder')
+                embed.add_field(name='\u200B', value='\u200B')
+                embed.set_thumbnail(url=source.thumbnail)
+                embed.set_footer(text=source.url)
 
                 await ctx.voice_state.songs.put(song)
-                await ctx.send('Enqueued {}'.format(str(source)))
+                # await ctx.send('Enqueued {}'.format(str(source)))
+                await ctx.send(embed=embed)
 
     @_join.before_invoke
     @_play.before_invoke
