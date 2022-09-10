@@ -3,7 +3,17 @@
 
 ## Setup
 
+### Token
+
 To run this bot, you will need to provide it with a token to use. This can be done by creating a file called `TOKEN` in the root directory of the project, and putting the token in here. The bot will then read the token from that file.
+
+### Database
+
+Run the file at 'src/db_setup.py' to create the database file.
+
+### FFMPEG
+
+Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z), then take the files from the 'downloaded folder/bin' and drop them into a new directory: 'Derby-College-Bot/ffmpeg/'.
 
 ## Development Plans
 
