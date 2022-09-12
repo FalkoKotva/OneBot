@@ -12,9 +12,9 @@ class ReportModal(ui.Modal, title='Report Ticket'):
     """
     Modal for users to report other users.
     """
-    
+
     accused = ui.TextInput(
-        label='Who are you reporting?',
+        label='Who would you like to report?',
         placeholder='exampleuser#1234'
     )
     reason = ui.TextInput(
@@ -25,14 +25,18 @@ class ReportModal(ui.Modal, title='Report Ticket'):
     def __init__(self, func: Coroutine):
         super().__init__()
         self.func = lambda *args: func(*args)
-    
+
     async def on_submit(self, interaction: Interaction):
+    
+        #
+        await self.func(interaction, self.accused.value, self.reason.value)
+    
+        # Send a message to confirm the report
         await interaction.response.send_message(
             'Thanks for your report {0.user.mention}!'.format(interaction) +
             '\nWe will look into it as soon as possible.',
             ephemeral=True
         )
-        await self.func(self.accused.value, self.reason.value)
 
 
 class SuggestionModal(ui.Modal, title='Suggestion Ticket'):
@@ -41,7 +45,7 @@ class SuggestionModal(ui.Modal, title='Suggestion Ticket'):
     """
     
     suggestion = ui.TextInput(
-        label='What suggestion/feature request would you like to share?',
+        label='What suggestion would you like to share?',
         style=discord.TextStyle.long
     )
     
@@ -50,9 +54,5 @@ class SuggestionModal(ui.Modal, title='Suggestion Ticket'):
         self.func = lambda *args: func(*args)
     
     async def on_submit(self, interaction: Interaction):
-        await interaction.response.send_message(
-            'Thanks for your suggestion {0.user.mention}!'.format(interaction) +
-            '\nWe will look into it as soon as possible.',
-            ephemeral=True
-        )
-        await self.func(self.suggestion.value)
+        await self.func(interaction, self.suggestion.value)
+

@@ -17,6 +17,8 @@ from constants import (
     TICKETS_CATEGORY_ID,
     TicketType
 )
+from ui import ReportModal, SuggestionModal
+from utils import get_member
 
 
 class Tickets(Cog):
@@ -90,7 +92,7 @@ class Tickets(Cog):
         """
 
         # Show that the bot is thinking to prevent the interaction timing out
-        await interaction.response.defer(ephemeral=True)
+        # await interaction.response.defer(ephemeral=True)
 
         # Shorthands for replying to the user
         followup = interaction.followup.send
@@ -161,45 +163,74 @@ class Tickets(Cog):
         )
         await channel.send(embed=embed)
 
-        # We have done our work here, time to let the user know that.
-        await followup(TICKET_SUBMITTED_MSG, ephemeral=True)
-
     @group.command(name='suggestion')
-    @app_commands.describe(suggestion='Your suggestion or feature request')
-    async def create_suggestion_ticket(
-        self,
-        interaction:discord.Interaction,
-        *, suggestion:str
-    ):
+    async def create_suggestion_ticket(self, interaction:discord.Interaction):
         """
         Suggest a feature for the server
         """
-        await self.create_ticket(
-            interaction, TicketType.SUGGESTION,
-            interaction.user,
-            suggestion
-        )
+
+        async def on_submit(modal_interaction, suggestion):
+            """
+            Called when the user submits the suggestion modal
+            """
+
+            # Create a ticket based of the user suggestion
+            await self.create_ticket(
+                interaction, TicketType.SUGGESTION,
+                interaction.user,
+                suggestion
+            )
+
+            # Thank the user for their suggestion!
+            await modal_interaction.response.send_message(
+                'Thanks for your suggestion! \
+                \nWe will look into it as soon as possible.',
+                ephemeral=True
+            )
+
+        # Create a modal for the user to submit their suggestion
+        await interaction.response.send_modal(SuggestionModal(on_submit))
 
     @group.command(name='report')
-    @app_commands.describe(
-        accusing='The user you are accusing',
-        reason='The reason you are accusing them'
-    )
-    async def create_report_ticket(
-        self,
-        interaction: discord.Interaction,
-        accusing:discord.Member,
-        *, reason: str
-    ):
+    async def create_report_ticket(self, interaction: discord.Interaction):
         """
         Report a user for misbehaviour or bullying
         """
-        await self.create_ticket(
-            interaction, TicketType.REPORT,
-            interaction.user,
-            accusing,
-            reason
-        )
+        async def on_submit(modal_interaction, accused_user, reason):
+            """
+            Called when the user submits the report modal
+            """
+
+            # Get a discord.Member object based of the passed accused name or id
+            member = await get_member(modal_interaction, accused_user)
+            
+            # If the member is not found, cancel this ticket.
+            if not isinstance(member, discord.Member):
+                await modal_interaction.response.send_message(
+                    'Unable to process your report. \
+                    \nPlease make sure you are entering a valid username.',
+                    ephemeral=True
+                )
+                return
+
+            # Create a ticket using the information provided
+            await self.create_ticket(
+                interaction, TicketType.REPORT,
+                interaction.user,
+                member,
+                reason
+            )
+
+            # Thank the user for their report!
+            await modal_interaction.response.send_message(
+                'Thanks for your report! \
+                \nWe will look into it as soon as possible.',
+                ephemeral=True
+            )
+
+        # Create a modal for the user to send their report
+        await interaction.response.send_modal(ReportModal(on_submit))
+
     
     @group.command(name='close')
     @app_commands.describe(
