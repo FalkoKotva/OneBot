@@ -32,14 +32,6 @@ class Testing(Cog):
         Test that the bot is listening for commands.
         """
         await interaction.response.send_message('I am actively listening for commands.')
-        
-    @group.command(name='form')
-    async def send_form(self, interaction:discord.Interaction):
-        """
-        Test forms.
-        """
-
-        await interaction.response.send_modal(ReportModal())
 
 
 async def setup(bot):
