@@ -94,8 +94,8 @@ class Tickets(Cog):
         followup = interaction.followup.send
 
         # This sql query will get the next ticket id
-        get_id_sql = "SELECT ticketId FROM {0} ORDER BY ticketId \
-            DESC LIMIT 1"
+        get_id_sql = "SELECT ticketId FROM {0} ORDER BY ticketId " \
+                     "DESC LIMIT 1"
 
         # Normalize the data to be inserted into the database
         normalized_sql_values = []
@@ -164,6 +164,7 @@ class Tickets(Cog):
         await followup(TICKET_SUBMITTED_MSG, ephemeral=True)
 
     @group.command(name='suggestion')
+    @app_commands.describe(suggestion='Your suggestion or feature request')
     async def create_suggestion_ticket(
         self,
         interaction:discord.Interaction,
@@ -179,6 +180,10 @@ class Tickets(Cog):
         )
 
     @group.command(name='report')
+    @app_commands.describe(
+        accusing='The user you are accusing',
+        reason='The reason you are accusing them'
+    )
     async def create_report_ticket(
         self,
         interaction: discord.Interaction,
@@ -203,28 +208,46 @@ class Tickets(Cog):
         ticket_id:int
     ):
         """
-        Close a ticket
+        Close a ticket (admin/mod only)
         """
-        
+
+        # Shorthand for replying to the user
+        send = interaction.response.send_message
+
+        # Find the correct table to use based on the ticket type
         if ticket_type == TicketType.REPORT:
             table = 'user_report_tickets'
-        else:
+        elif ticket_type == TicketType.SUGGESTION:
             table = 'user_suggestion_tickets'
-            
+        else:
+            raise ValueError('Invalid ticket type')  # This should never happen
+
+        query = f'FROM {table} WHERE ticketId=?'
+
         # Check that the ticket exists
         async with aiosqlite.connect(DATABASE) as db:
             try:
-                found_id = await db.execute_fetchall('SELECT ticketId FROM {0} WHERE ticketId=?'.format(table), (ticket_id,))
-                found_id = found_id[0][0]
+                result = await db.execute_fetchall(
+                    'SELECT ticketId ' + query,
+                    (ticket_id,)
+                )
+                result[0][0]  # raises IndexError if ticket doesn't exist
             except IndexError:
-                await interaction.response.send_message(f'There are no {ticket_type.name.lower()} tickets with the id: {ticket_id}', ephemeral=True)
+                await send(
+                    f'There are no {ticket_type.name.lower()} ' \
+                    f'tickets with the id: {ticket_id}',
+                    ephemeral=True
+                )
                 return        
-        
+
+        # Delete the ticket from the database
         async with aiosqlite.connect(DATABASE) as db:
-            await db.execute('DELETE FROM {0} WHERE ticketId=?'.format(table), (ticket_id,))
+            await db.execute('DELETE ' + query,(ticket_id,))
             await db.commit()
 
-        await interaction.response.send_message('Ticket closed', ephemeral=True)
+        # TODO: Delete the ticket channel
+
+        await send('Ticket closed', ephemeral=True)
 
 
 async def setup(bot):
