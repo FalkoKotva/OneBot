@@ -6,11 +6,13 @@ Cog for handling tickets.
 import aiosqlite
 import discord
 from discord import app_commands
+from discord.app_commands import Choice
 
 from cog import Cog
 from constants import (
     DATABASE,
     GUILD_ID,
+    ADMIN_ROLE_ID,
     TICKET_SUBMITTED_MSG,
     TICKETS_CATEGORY_ID,
     TicketType
@@ -130,19 +132,15 @@ class Tickets(Cog):
         ticket_query = f'INSERT INTO {table} {values}'
         get_id_sql = get_id_sql.format(table)
 
-        print('writing ticket to db')
         # Write the ticket to the database
         async with aiosqlite.connect(DATABASE) as db:
-            print(ticket_query)
             await db.execute(ticket_query, normalized_sql_values)
             await db.commit()
             
-            print('ticket written, getting id')
             # Get the ticket id of the newly created ticket
             ticket_id = await db.execute_fetchall(get_id_sql)
             ticket_id = ticket_id[0][0]  # get value from [(int,)])
 
-        print('id obtained, creating channel')
         # Create a channel for the new ticket to be discussed in
         channel = await self.create_ticket_channel(
             prefix=ticket_type.name.lower(),
@@ -204,6 +202,15 @@ class Tickets(Cog):
         )
     
     @group.command(name='close')
+    @app_commands.describe(
+        ticket_type='The type of ticket you are closing',
+        ticket_id='The ID of the ticket you are closing'
+    )
+    @app_commands.choices(ticket_type=[
+        Choice(name='report ticket', value=TicketType.REPORT.value),
+        Choice(name='suggestion ticket', value=TicketType.SUGGESTION.value)
+    ])
+    @app_commands.checks.has_any_role(ADMIN_ROLE_ID)
     async def close_ticket(
         self,
         interaction:discord.Interaction,
@@ -223,13 +230,11 @@ class Tickets(Cog):
         elif ticket_type == TicketType.SUGGESTION:
             table = 'user_suggestion_tickets'
         else:
-            print('bad thing happened')
             raise ValueError('Invalid ticket type')  # This should never happen
 
         query = f'FROM {table} WHERE ticket_id=?'
 
         # Check that the ticket exists
-        print('checking if ticket exists')
         async with aiosqlite.connect(DATABASE) as db:
             try:
                 result = await db.execute_fetchall(
@@ -244,19 +249,15 @@ class Tickets(Cog):
                     ephemeral=True
                 )
                 return
-        print('Ticket exists, deleteing from db')
 
         # Delete the ticket from the database
         async with aiosqlite.connect(DATABASE) as db:
             await db.execute('DELETE ' + query,(ticket_id,))
             await db.commit()
-        print('ticket deleted, deleting channel')
 
         # Delete the ticket channel
         guild: discord.Guild = self.bot.get_guild(GUILD_ID)
-        print('guild found, deleting channel')
         await guild.get_channel(channel_id).delete(reason='Ticket closed')
-        print('channel deleted')
 
         await send(
             'Ticket closed. The ticket channel has also been deleted.',
