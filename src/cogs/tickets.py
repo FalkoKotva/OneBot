@@ -94,7 +94,7 @@ class Tickets(Cog):
         followup = interaction.followup.send
 
         # This sql query will get the next ticket id
-        get_id_sql = "SELECT ticketId FROM {0} ORDER BY ticketId " \
+        get_id_sql = "SELECT ticket_id FROM {0} ORDER BY ticket_id " \
                      "DESC LIMIT 1"
 
         # Normalize the data to be inserted into the database
@@ -120,37 +120,40 @@ class Tickets(Cog):
                 )
                 return
 
-            # Sql query to create a report ticket in the database
-            ticket_sql = """
-                INSERT INTO user_report_tickets 
-                (userId, offenderUserId, messageContent) 
-                VALUES (?, ?, ?)
-                """
-            get_id_sql = get_id_sql.format('user_report_tickets')
+            table = 'user_report_tickets'
+            values = '(user_id, accused_user_id, channel_id, reason_msg) VALUES (?, ?, NULL, ?)'
+        elif ticket_type == TicketType.SUGGESTION:
+            table = 'user_suggestion_tickets'
+            values = '(user_id, channel_id, suggestion_msg) VALUES (?, NULL, ?)'
 
-        else:
-            # Sql query to create a suggestion ticket in the database
-            ticket_sql = """
-                INSERT INTO user_suggestion_tickets 
-                (userId, suggestion) 
-                VALUES (?, ?)
-                """
-            get_id_sql = get_id_sql.format('user_suggestion_tickets')
+        
+        ticket_query = f'INSERT INTO {table} {values}'
+        get_id_sql = get_id_sql.format(table)
 
+        print('writing ticket to db')
         # Write the ticket to the database
         async with aiosqlite.connect(DATABASE) as db:
-            await db.execute(ticket_sql, normalized_sql_values)
+            print(ticket_query)
+            await db.execute(ticket_query, normalized_sql_values)
             await db.commit()
-
+            
+            print('ticket written, getting id')
             # Get the ticket id of the newly created ticket
             ticket_id = await db.execute_fetchall(get_id_sql)
-            ticket_id = ticket_id[0][0]  # get value from [(int,)]
+            ticket_id = ticket_id[0][0]  # get value from [(int,)])
 
+        print('id obtained, creating channel')
         # Create a channel for the new ticket to be discussed in
         channel = await self.create_ticket_channel(
             prefix=ticket_type.name.lower(),
             ticket_id=ticket_id
         )
+
+        # Store the channel id in the database with the ticket
+        channel_query = f"UPDATE {table} SET channel_id = ? WHERE ticket_id = ?"
+        async with aiosqlite.connect(DATABASE) as db:
+            await db.execute(channel_query, (channel.id, ticket_id))
+            await db.commit()
 
         # Create an embed for the ticket
         embed = self.create_ticket_embed(
@@ -200,54 +203,54 @@ class Tickets(Cog):
             reason
         )
     
-    @group.command(name='close')
-    async def close_ticket(
-        self,
-        interaction:discord.Interaction,
-        ticket_type:TicketType,
-        ticket_id:int
-    ):
-        """
-        Close a ticket (admin/mod only)
-        """
+    # @group.command(name='close')
+    # async def close_ticket(
+    #     self,
+    #     interaction:discord.Interaction,
+    #     ticket_type:TicketType,
+    #     ticket_id:int
+    # ):
+    #     """
+    #     Close a ticket (admin/mod only)
+    #     """
 
-        # Shorthand for replying to the user
-        send = interaction.response.send_message
+    #     # Shorthand for replying to the user
+    #     send = interaction.response.send_message
 
-        # Find the correct table to use based on the ticket type
-        if ticket_type == TicketType.REPORT:
-            table = 'user_report_tickets'
-        elif ticket_type == TicketType.SUGGESTION:
-            table = 'user_suggestion_tickets'
-        else:
-            raise ValueError('Invalid ticket type')  # This should never happen
+    #     # Find the correct table to use based on the ticket type
+    #     if ticket_type == TicketType.REPORT:
+    #         table = 'user_report_tickets'
+    #     elif ticket_type == TicketType.SUGGESTION:
+    #         table = 'user_suggestion_tickets'
+    #     else:
+    #         raise ValueError('Invalid ticket type')  # This should never happen
 
-        query = f'FROM {table} WHERE ticketId=?'
+    #     query = f'FROM {table} WHERE ticket_id=?'
 
-        # Check that the ticket exists
-        async with aiosqlite.connect(DATABASE) as db:
-            try:
-                result = await db.execute_fetchall(
-                    'SELECT ticketId ' + query,
-                    (ticket_id,)
-                )
-                result[0][0]  # raises IndexError if ticket doesn't exist
-            except IndexError:
-                await send(
-                    f'There are no {ticket_type.name.lower()} ' \
-                    f'tickets with the id: {ticket_id}',
-                    ephemeral=True
-                )
-                return        
+    #     # Check that the ticket exists
+    #     async with aiosqlite.connect(DATABASE) as db:
+    #         try:
+    #             result = await db.execute_fetchall(
+    #                 'SELECT ticket_id ' + query,
+    #                 (ticket_id,)
+    #             )
+    #             result[0][0]  # raises IndexError if ticket doesn't exist
+    #         except IndexError:
+    #             await send(
+    #                 f'There are no {ticket_type.name.lower()} ' \
+    #                 f'tickets with the id: {ticket_id}',
+    #                 ephemeral=True
+    #             )
+    #             return        
 
-        # Delete the ticket from the database
-        async with aiosqlite.connect(DATABASE) as db:
-            await db.execute('DELETE ' + query,(ticket_id,))
-            await db.commit()
+    #     # Delete the ticket from the database
+    #     async with aiosqlite.connect(DATABASE) as db:
+    #         await db.execute('DELETE ' + query,(ticket_id,))
+    #         await db.commit()
 
-        # TODO: Delete the ticket channel
+    #     # TODO: Delete the ticket channel
 
-        await send('Ticket closed', ephemeral=True)
+    #     await send('Ticket closed', ephemeral=True)
 
 
 async def setup(bot):
