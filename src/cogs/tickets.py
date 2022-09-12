@@ -203,54 +203,65 @@ class Tickets(Cog):
             reason
         )
     
-    # @group.command(name='close')
-    # async def close_ticket(
-    #     self,
-    #     interaction:discord.Interaction,
-    #     ticket_type:TicketType,
-    #     ticket_id:int
-    # ):
-    #     """
-    #     Close a ticket (admin/mod only)
-    #     """
+    @group.command(name='close')
+    async def close_ticket(
+        self,
+        interaction:discord.Interaction,
+        ticket_type:TicketType,
+        ticket_id:int
+    ):
+        """
+        Close a ticket (admin/mod only)
+        """
 
-    #     # Shorthand for replying to the user
-    #     send = interaction.response.send_message
+        # Shorthand for replying to the user
+        send = interaction.response.send_message
 
-    #     # Find the correct table to use based on the ticket type
-    #     if ticket_type == TicketType.REPORT:
-    #         table = 'user_report_tickets'
-    #     elif ticket_type == TicketType.SUGGESTION:
-    #         table = 'user_suggestion_tickets'
-    #     else:
-    #         raise ValueError('Invalid ticket type')  # This should never happen
+        # Find the correct table to use based on the ticket type
+        if ticket_type == TicketType.REPORT:
+            table = 'user_report_tickets'
+        elif ticket_type == TicketType.SUGGESTION:
+            table = 'user_suggestion_tickets'
+        else:
+            print('bad thing happened')
+            raise ValueError('Invalid ticket type')  # This should never happen
 
-    #     query = f'FROM {table} WHERE ticket_id=?'
+        query = f'FROM {table} WHERE ticket_id=?'
 
-    #     # Check that the ticket exists
-    #     async with aiosqlite.connect(DATABASE) as db:
-    #         try:
-    #             result = await db.execute_fetchall(
-    #                 'SELECT ticket_id ' + query,
-    #                 (ticket_id,)
-    #             )
-    #             result[0][0]  # raises IndexError if ticket doesn't exist
-    #         except IndexError:
-    #             await send(
-    #                 f'There are no {ticket_type.name.lower()} ' \
-    #                 f'tickets with the id: {ticket_id}',
-    #                 ephemeral=True
-    #             )
-    #             return        
+        # Check that the ticket exists
+        print('checking if ticket exists')
+        async with aiosqlite.connect(DATABASE) as db:
+            try:
+                result = await db.execute_fetchall(
+                    'SELECT channel_id ' + query,
+                    (ticket_id,)
+                )
+                channel_id = result[0][0]  # raises IndexError if ticket doesn't exist
+            except IndexError:
+                await send(
+                    f'There are no {ticket_type.name.lower()} ' \
+                    f'tickets with the id: {ticket_id}',
+                    ephemeral=True
+                )
+                return
+        print('Ticket exists, deleteing from db')
 
-    #     # Delete the ticket from the database
-    #     async with aiosqlite.connect(DATABASE) as db:
-    #         await db.execute('DELETE ' + query,(ticket_id,))
-    #         await db.commit()
+        # Delete the ticket from the database
+        async with aiosqlite.connect(DATABASE) as db:
+            await db.execute('DELETE ' + query,(ticket_id,))
+            await db.commit()
+        print('ticket deleted, deleting channel')
 
-    #     # TODO: Delete the ticket channel
+        # Delete the ticket channel
+        guild: discord.Guild = self.bot.get_guild(GUILD_ID)
+        print('guild found, deleting channel')
+        await guild.get_channel(channel_id).delete(reason='Ticket closed')
+        print('channel deleted')
 
-    #     await send('Ticket closed', ephemeral=True)
+        await send(
+            'Ticket closed. The ticket channel has also been deleted.',
+            ephemeral=True
+        )
 
 
 async def setup(bot):
