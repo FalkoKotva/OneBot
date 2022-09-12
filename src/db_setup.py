@@ -14,19 +14,21 @@ def main():
     # Create the table for report tickets
     cur.execute(
         """CREATE TABLE IF NOT EXISTS user_report_tickets (
-            ticketId INTEGER PRIMARY KEY AUTOINCREMENT,
-            userId INTEGER NOT NULL,
-            offenderUserId INTEGER NOT NULL,
-            messageContent TEXT NOT NULL
+            ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            accused_user_id INTEGER NOT NULL,
+            channel_id INTEGER,
+            reason_msg TEXT NOT NULL
         )"""
     )
 
     # Create the table for suggestion tickets
     cur.execute(
         """CREATE TABLE IF NOT EXISTS user_suggestion_tickets (
-            ticketId INTEGER PRIMARY KEY AUTOINCREMENT,
-            userId INTEGER NOT NULL,
-            suggestion TEXT NOT NULL
+            ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            channel_id INTEGER,
+            suggestion_msg TEXT NOT NULL
             )
         """
     )
