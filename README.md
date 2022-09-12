@@ -13,7 +13,7 @@ Run the file at 'src/db_setup.py' to create the database file.
 
 ### FFMPEG
 
-Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z), then take the files from the 'downloaded folder/bin' and drop them into a new directory: 'Derby-College-Bot/ffmpeg/'.
+Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z), then take the files from the 'downloaded folder/bin' and drop them into a new directory: 'ffmpeg/' at the root of the project directory.
 
 ## Development Plans
 
