@@ -26,7 +26,7 @@ class Bot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix='!', intents=intents)
-
+        
         # The main guild is the DCG server which this bot is made for
         self.main_guild = discord.Object(id=GUILD_ID)
 

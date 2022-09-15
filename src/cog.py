@@ -12,7 +12,7 @@ class Cog(commands.Cog):
     """
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: commands.Bot = bot
         
     @commands.Cog.listener()
     async def on_ready(self):

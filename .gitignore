@@ -1,6 +1,9 @@
 # Token File
 TOKEN
 
+# FFMPEG
+ffmpeg
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
