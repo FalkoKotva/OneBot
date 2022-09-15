@@ -13,13 +13,13 @@ Run the file at 'src/db_setup.py' to create the database file.
 
 ### FFMPEG
 
-Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z), then take the files from the 'downloaded folder/bin' and drop them into a new directory: 'ffmpeg/' at the root of the project directory.
+Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z), then take the files from the 'downloaded folder/bin' and drop them into a new directory 'ffmpeg/' at the root of the project directory.
 
 ## Development Plans
 
 - [ ] Add a command to allow users to add their own roles
-- [ ] Add a cog that will pull memes from Reddit daily to keep certain channels active
-- [ ] Implement music playback for voice channels
+- [ ] Add a cog that will pull memes from Reddit or somewhere else daily to keep certain channels active
+- [x] Implement music playback for voice channels
 - [x] Create a ticket system for users to request help from staff
 - [x] Create a ticket system for users to suggest new server features
-- [ ] Refine the ticket system to be cleaner and easy to use
+- [x] Refine the ticket system to be cleaner and easy to use
