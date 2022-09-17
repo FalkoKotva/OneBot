@@ -14,6 +14,9 @@ MODERATOR_ROLE_ID = None  # TODO
 # Other constants
 TICKET_SUBMITTED_MSG = 'Your ticket has been submitted and processed.'
 DATABASE = 'db.sqlite3'
+LOGS = 'logs/'
+LOG_FILENAME_FORMAT_PREFIX = '%Y-%m-%d %H-%M-%S'
+MAX_LOGFILE_AGE_DAYS = 7
 
 # Ticket Enums
 class TicketType(Enum):
