@@ -1,19 +1,17 @@
 """
 Entry point for the bot. Run this file to get things started.
-
-I am unable to use logging with this bot because the code runs asynchronously
-which is not supported by the built-in logging library. As a substititue until
-I find a better solution, I will be using print functions.
 """
 
 
 import os
 import asyncio
+import logging
 import discord
 from discord.ext import commands
 
 from database import setup as db_setup
 from constants import DATABASE, GUILD_ID
+from logs import setup_logs
 
 
 class Bot(commands.Bot):
@@ -46,8 +44,9 @@ class Bot(commands.Bot):
         if not self.commands_synced:
             await self.tree.sync(guild=self.main_guild)
             self.commands_synced = True
+            log.debug('Tree Commands Synced')
 
-        print(f'Logged in as {self.user} (ID: {self.user.id})')
+        log.info(f'Logged in as {self.user} (ID: {self.user.id})')
     
     async def load_cogs(self):
         """
@@ -57,9 +56,21 @@ class Bot(commands.Bot):
         for filename in os.listdir('./src/cogs'):
             if filename.endswith('.py'):
                 await self.load_extension(f'cogs.{filename[:-3]}')
+                log.debug(f'Loading Cog: {filename}')
 
 
 async def main():
+    
+    # Setup logging before anything else
+    setup_logs()
+    
+    # Get the root logger
+    global log
+    log = logging.getLogger('main')
+
+    # Mute the loud discord.py logger
+    discord_logger = logging.getLogger('discord')
+    discord_logger.setLevel(logging.WARNING)
 
     # Get the secret token
     with open('TOKEN', 'r', encoding='utf-8') as f:
