@@ -3,14 +3,18 @@ Use this file to setup the database
 """
 
 import sqlite3
+
 from constants import DATABASE
 
 
-def main():
-    
+def setup():
+    """
+    Setup the database file and tables
+    """
+
     db = sqlite3.connect(DATABASE)
     cur = db.cursor()
-    
+
     # Create the table for report tickets
     cur.execute(
         """CREATE TABLE IF NOT EXISTS user_report_tickets (
@@ -32,10 +36,9 @@ def main():
             )
         """
     )
-    
+
     db.commit()
     db.close()
-    
 
 if __name__ == '__main__':
-    main()
+    setup()

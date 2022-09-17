@@ -12,7 +12,8 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from constants import GUILD_ID
+from database import setup as db_setup
+from constants import DATABASE, GUILD_ID
 
 
 class Bot(commands.Bot):
@@ -26,8 +27,12 @@ class Bot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix='!', intents=intents)
-        
-        # The main guild is the DCG server which this bot is made for
+
+        # Create the database file if it doesnt exist
+        if not os.path.exists(DATABASE):
+            db_setup()
+
+        # Main discord server the bot is in
         self.main_guild = discord.Object(id=GUILD_ID)
 
     async def on_ready(self):
