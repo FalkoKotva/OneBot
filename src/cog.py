@@ -2,8 +2,11 @@
 Cog class for all cogs to inherit from
 """
 
-
+import logging
 from discord.ext import commands
+
+
+log = logging.getLogger(__name__)
 
 
 class Cog(commands.Cog):
@@ -18,6 +21,6 @@ class Cog(commands.Cog):
     async def on_ready(self):
         """
         Method called when the cog has been loaded.
-        Prints a ready message to the console.
+        Logs a ready message.
         """
-        print(f'Loaded Cog (NAME: {self.__class__.__name__})')
+        log.info(f'Loaded Cog (NAME: {self.__class__.__name__})')

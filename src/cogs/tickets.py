@@ -2,7 +2,7 @@
 Cog for handling tickets.
 """
 
-
+import logging
 import aiosqlite
 import discord
 from discord import app_commands
@@ -19,6 +19,9 @@ from constants import (
 )
 from ui import ReportModal, SuggestionModal
 from utils import get_member
+
+
+log = logging.getLogger(__name__)
 
 
 class Tickets(Cog):
@@ -43,6 +46,8 @@ class Tickets(Cog):
         Creates and returns a discord TextChannel object to store a
         new ticket.
         """
+        
+        log.debug(f'Creating new ticket channel for ticket #{ticket_id}')
 
         # The guild and category where the new channel will be created
         guild: discord.Guild = self.bot.get_guild(GUILD_ID)
@@ -63,10 +68,12 @@ class Tickets(Cog):
         Creates and returns a discord Embed for use in tickets.
         """
 
+        log.debug(f'Creating new ticket embed for ticket #{ticket_id}')
+
         # The embed that will be returned
         embed = discord.Embed(
             colour=args[0].colour,
-            title=f"{ticket_type.name.title()} Ticket #{ticket_id}"
+            title=f"{ticket_type.name.title()} Ticket #{ticket_id}",
         )
         
         # Add the ticket details to the embed via fields
@@ -90,6 +97,8 @@ class Tickets(Cog):
         Create a new ticket. This will create a new channel and
         embed for the ticket.
         """
+        
+        log.debug(f'Creating new ticket of type {ticket_type.name}')
 
         # Show that the bot is thinking to prevent the interaction timing out
         # await interaction.response.defer(ephemeral=True)
@@ -126,13 +135,16 @@ class Tickets(Cog):
 
             table = 'user_report_tickets'
             values = '(user_id, accused_user_id, channel_id, reason_msg) VALUES (?, ?, NULL, ?)'
+
         elif ticket_type == TicketType.SUGGESTION:
             table = 'user_suggestion_tickets'
             values = '(user_id, channel_id, suggestion_msg) VALUES (?, NULL, ?)'
 
-        
+
         ticket_query = f'INSERT INTO {table} {values}'
         get_id_sql = get_id_sql.format(table)
+
+        log.debug('Creating new ticket in database')
 
         # Write the ticket to the database
         async with aiosqlite.connect(DATABASE) as db:
@@ -142,6 +154,8 @@ class Tickets(Cog):
             # Get the ticket id of the newly created ticket
             ticket_id = await db.execute_fetchall(get_id_sql)
             ticket_id = ticket_id[0][0]  # get value from [(int,)])
+        
+        log.debug(f'Ticket created in database with id: {ticket_id}')
 
         # Create a channel for the new ticket to be discussed in
         channel = await self.create_ticket_channel(
