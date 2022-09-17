@@ -1,8 +1,12 @@
 # Token File
 TOKEN
+TOKEN_dev
 
 # FFMPEG
-ffmpeg
+ffmpeg/
+
+# Logging
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
