@@ -3,12 +3,13 @@ discord UI kit objects.
 """
 
 import logging
+import textwrap
 import requests
 import discord
 import discord.ui as ui
 from discord import Interaction
 from typing import Coroutine
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
 from constants import AVATAR_SIZE, BANNER_SIZE
@@ -60,7 +61,26 @@ class ProfileImage:
                 ).content
             )
 
-        return Image.open(bytes)
+        return Image.open(bytes).convert('RGBA')
+
+    async def _add_text(self, draw:ImageDraw.ImageDraw, text:str, pos:tuple[int, int], align:tuple[str, str]) -> None:
+        """
+        Insert text into an image.
+        """
+
+        log.debug('calculating text wrap...')
+        font = ImageFont.truetype('assets/fonts/Gidole-Regular.ttf', 30)
+
+        # calculate wraplength
+        margin, offset = pos
+        for i, line in enumerate(textwrap.wrap(text, width=15, break_long_words=True)):
+            draw.text(
+                (margin, offset), line, font=font, fill='white', anchor='mt'
+            )
+            offset += font.getsize(line)[1]
+            log.debug(f'text lines: {i+1}')
+        
+        log.debug('text wrap calculated.')
 
     async def create(self) -> None:
         """
@@ -68,7 +88,7 @@ class ProfileImage:
         It can be accessed after this method via the `bytes` attribute.
         """
 
-        member = self.member
+        member: discord.Member = self.member
 
         log.info(f'Creating profile card for {member.name}')
 
@@ -91,13 +111,23 @@ class ProfileImage:
 
         # Paste the images onto the template
         final_image = Image.new('RGBA', template.size)
-        final_image.paste(avatar, (50, 25), avatar)
+        final_image.paste(avatar, (75, 50), avatar)
         # final_image.paste(banner, (), banner)
         final_image.paste(template, (0, 0), template)
+        
+        log.debug('Adding text...')
+        
+        draw = ImageDraw.Draw(final_image)
+        await self._add_text(
+            draw=draw,
+            text=f'@{member.display_name}#{member.discriminator}',
+            pos=(150, 225),
+            align=('center', 'mm')
+        )
 
         self.image = final_image
         final_image.save(self.bytes, format='png')
-        self.bytes.seek(0)        
+        self.bytes.seek(0)
 
 
 class ReportModal(ui.Modal, title='Report Ticket'):
