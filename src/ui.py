@@ -2,10 +2,102 @@
 discord UI kit objects.
 """
 
+import logging
+import requests
 import discord
 import discord.ui as ui
 from discord import Interaction
 from typing import Coroutine
+from PIL import Image
+from io import BytesIO
+
+from constants import AVATAR_SIZE, BANNER_SIZE
+
+
+log = logging.getLogger(__name__)
+
+
+class LevelObject:
+    exp: int
+    exp_next: int
+    level: int
+    rank: int
+    
+    def __init__(self, member:discord.Member):
+        self.exp = 0
+        self.exp_next = 0
+        self.level = 0
+        self.rank = 0
+
+
+class ProfileImage:
+    """
+    Creates a profile card for a discord member
+    """
+
+    bytes: BytesIO
+    image: Image.Image
+
+    def __init__(self, member:discord.Member):
+        self.bytes = BytesIO()
+        self.member = member
+
+    async def _get_asset_img(self, asset:discord.Asset, ) -> Image.Image:
+        """
+        Returns an `Image.Image` object from a `discord.Asset`.
+        """
+
+        try:
+            bytes = BytesIO(await asset.read())
+        except AttributeError as err:
+            log.error(
+                f'Failed to get asset image, using default image \
+                    instead. Err: {err}'
+            )
+            bytes = BytesIO(
+                requests.get(
+                    'https://cdn.discordapp.com/embed/avatars/0.png'
+                ).content
+            )
+
+        return Image.open(bytes)
+
+    async def create(self) -> None:
+        """
+        Creates a profile card image and stores it as a `BytesIO` object.
+        It can be accessed after this method via the `bytes` attribute.
+        """
+
+        member = self.member
+
+        log.info(f'Creating profile card for {member.name}')
+
+        # The template is the card itself without the pictures or text
+        template = Image.open('assets/profile_template.png')
+
+        log.debug('Getting avatar...')
+
+        # Avatar is the member's profile picture
+        avatar = await self._get_asset_img(member.display_avatar)
+        avatar = avatar.resize(AVATAR_SIZE)
+
+        # log.debug('Getting banner...')
+
+        # # Banner is the member's profile banner
+        # banner = await self._get_asset_img(member.banner)
+        # banner = banner.resize(BANNER_SIZE)
+
+        log.debug('Pasting images...')
+
+        # Paste the images onto the template
+        final_image = Image.new('RGBA', template.size)
+        final_image.paste(avatar, (50, 25), avatar)
+        # final_image.paste(banner, (), banner)
+        final_image.paste(template, (0, 0), template)
+
+        self.image = final_image
+        final_image.save(self.bytes, format='png')
+        self.bytes.seek(0)        
 
 
 class ReportModal(ui.Modal, title='Report Ticket'):
