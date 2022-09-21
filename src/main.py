@@ -44,7 +44,7 @@ class Bot(commands.Bot):
         if not self.commands_synced:
             await self.tree.sync(guild=self.main_guild)
             self.commands_synced = True
-            log.debug('Tree Commands Synced')
+            log.info('Tree Commands Synced')
 
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
     
@@ -53,10 +53,14 @@ class Bot(commands.Bot):
         Attempts to load all .py files in the cogs directory as cogs.
         """
 
+        log.info('Loading cogs...')
         for filename in os.listdir('./src/cogs'):
             if filename.endswith('.py'):
                 await self.load_extension(f'cogs.{filename[:-3]}')
                 log.debug(f'Loading Cog: {filename}')
+                continue
+            
+            log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
 
 
 async def main():
@@ -67,10 +71,6 @@ async def main():
     # Get the root logger
     global log
     log = logging.getLogger('main')
-
-    # Mute the loud discord.py logger
-    discord_logger = logging.getLogger('discord')
-    discord_logger.setLevel(logging.WARNING)
 
     # Get the secret token
     with open('TOKEN', 'r', encoding='utf-8') as f:

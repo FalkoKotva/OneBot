@@ -61,6 +61,14 @@ def _delete_old_logs():
             log.info('Removing expired log file: {path.name}')
             path.unlink()
 
+def update_log_levels(logger_names:tuple[str], level:int):
+    """
+    Quick way to update the log level of multiple loggers at once.
+    """
+    for name in logger_names:
+        logger=logging.getLogger(name)
+        logger.setLevel(level)
+
 def setup_logs():
     """
     Setup a logging queue handler and queue listener.
@@ -86,6 +94,12 @@ def setup_logs():
     # Create a listener to handle the queue
     queue_listener = QueueListener(log_queue, file_handler, sys_handler)
     queue_listener.start()
+    
+    # Mute loud loggers
+    update_log_levels(
+        ('discord', 'PIL', 'urllib3'),
+        logging.WARNING
+    )
 
     # Clear up old log files
     _delete_old_logs()
