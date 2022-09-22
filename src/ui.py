@@ -2,6 +2,7 @@
 discord UI kit objects.
 """
 
+import json
 import logging
 import textwrap
 import requests
@@ -38,6 +39,10 @@ class ProfileImage:
 
     bytes: BytesIO
     image: Image.Image
+    template: Image.Image = Image.open('assets/profile/template.png')
+
+    with open('assets/profile/profile.json') as f:
+        data: dict = json.load(f)
 
     def __init__(self, member:discord.Member):
         self.bytes = BytesIO()
@@ -63,13 +68,12 @@ class ProfileImage:
 
         return Image.open(bytes).convert('RGBA')
 
-    async def _add_text(self, draw:ImageDraw.ImageDraw, text:str, pos:tuple[int, int], align:tuple[str, str]) -> None:
+    async def _wrap_text(self, draw:ImageDraw.ImageDraw, text:str, pos:tuple[int, int], font:ImageFont.ImageFont) -> None:
         """
         Insert text into an image.
         """
 
         log.debug('calculating text wrap...')
-        font = ImageFont.truetype('assets/fonts/Gidole-Regular.ttf', 30)
 
         # calculate wraplength
         margin, offset = pos
@@ -89,41 +93,61 @@ class ProfileImage:
         """
 
         member: discord.Member = self.member
-
         log.info(f'Creating profile card for {member.name}')
 
-        # The template is the card itself without the pictures or text
-        template = Image.open('assets/profile_template.png')
-
-        log.debug('Getting avatar...')
-
         # Avatar is the member's profile picture
+        log.debug('Getting avatar...')
+        avatar_data = self.data['avatar']
         avatar = await self._get_asset_img(member.display_avatar)
-        avatar = avatar.resize(AVATAR_SIZE)
+        avatar = avatar.resize((avatar_data['width'], avatar_data['height']))
 
-        # log.debug('Getting banner...')
-
-        # # Banner is the member's profile banner
-        # banner = await self._get_asset_img(member.banner)
-        # banner = banner.resize(BANNER_SIZE)
-
-        log.debug('Pasting images...')
+        # Custom banner
+        log.debug('Creating banner...')
+        banner_data = self.data['banner']
+        banner = Image.new(
+            'RGBA', (banner_data['width'], banner_data['height']),
+            color=discord.Colour.blurple().to_rgb()
+        )
+        
+        # Level bar is an alias for exp bar
+        log.debug('Creating level bar...')
+        bar_data = self.data['levelbar']
+        bar_trough = Image.new(
+            'RGBA', (bar_data['width'], bar_data['height']),
+            color=bar_data['colour']
+        )
+        bar = Image.new(
+            'RGBA', (int(bar_data['width']*0.6), bar_data['height']),
+            color=discord.Colour.blurple().to_rgb()
+        )
 
         # Paste the images onto the template
-        final_image = Image.new('RGBA', template.size)
-        final_image.paste(avatar, (75, 50), avatar)
-        # final_image.paste(banner, (), banner)
-        final_image.paste(template, (0, 0), template)
+        log.debug('Pasting images...')
+        final_image = Image.new('RGBA', self.template.size)
+        final_image.paste(avatar, (avatar_data['x'], avatar_data['y']), avatar)
+        final_image.paste(banner, (banner_data['x'], banner_data['y']), banner)
+        final_image.paste(bar_trough, (bar_data['x'], bar_data['y']), bar_trough)
+        final_image.paste(bar, (bar_data['x'], bar_data['y']), bar)
+        final_image.paste(self.template, (0, 0), self.template)
         
         log.debug('Adding text...')
-        
+
         draw = ImageDraw.Draw(final_image)
-        await self._add_text(
+        await self._wrap_text(
             draw=draw,
             text=f'@{member.display_name}#{member.discriminator}',
             pos=(150, 225),
-            align=('center', 'mm')
+            font=ImageFont.truetype(
+                'assets/fonts/Gidole-Regular.ttf', 30
+            )
         )
+        # draw.text(
+        #     xy=(265+(banner.width/2), 30+(banner.height/2)),
+        #     text='DCG Placeholder Text',
+        #     font=ImageFont.truetype('assets/fonts/Gidole-Regular.ttf', 55),
+        #     align='center',
+        #     anchor='mm',
+        # )
 
         self.image = final_image
         final_image.save(self.bytes, format='png')
