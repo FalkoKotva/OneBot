@@ -17,6 +17,7 @@ DATABASE = 'db.sqlite3'
 LOGS = 'logs/'
 LOG_FILENAME_FORMAT_PREFIX = '%Y-%m-%d %H-%M-%S'
 MAX_LOGFILE_AGE_DAYS = 7
+ACTIVITY_MSG = 'I am up and running!'
 
 # Member Profile Card Constants
 AVATAR_SIZE = (150, 150)

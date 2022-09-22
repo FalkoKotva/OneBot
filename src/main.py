@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 from database import setup as db_setup
-from constants import DATABASE, GUILD_ID
+from constants import DATABASE, GUILD_ID, ACTIVITY_MSG
 from logs import setup_logs
 
 
@@ -25,6 +25,7 @@ class Bot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix='!', intents=intents)
+        self.activity = discord.Game(name=ACTIVITY_MSG)
 
         # Create the database file if it doesnt exist
         if not os.path.exists(DATABASE):
