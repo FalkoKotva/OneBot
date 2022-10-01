@@ -1,7 +1,6 @@
 """Cog for welcoming new members"""
 
 import discord
-from discord import ui
 from discord import Interaction
 from discord import app_commands
 from discord.ext import commands
@@ -9,7 +8,6 @@ from datetime import datetime
 
 from cog import Cog
 from constants import Channels
-from ui import WelcomeView
 
 
 class Welcome(Cog):
