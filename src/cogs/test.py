@@ -1,5 +1,5 @@
 """
-Cog for handling tickets.
+Cog for testing.
 """
 
 
