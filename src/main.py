@@ -1,17 +1,19 @@
-"""
-Entry point for the bot. Run this file to get things started.
-"""
+"""Entry point for the bot. Run this file to get things started."""
 
 
 import os
 import asyncio
 import logging
 import discord
+from discord import app_commands, Interaction as Inter
 from discord.ext import commands
+from typing import Callable
 
+from cog import Cog
+from logs import setup_logs
+from utils import list_cogs, to_choices
 from database import setup as db_setup
 from constants import DATABASE, GUILD_ID, ACTIVITY_MSG
-from logs import setup_logs
 
 
 class Bot(commands.Bot):
@@ -53,6 +55,11 @@ class Bot(commands.Bot):
         """
         Attempts to load all .py files in the cogs directory as cogs.
         """
+        
+        # The cog manager is loaded seperately so that it can not be
+        # unloaded since it is used to unload other cogs.
+        log.info('Loading cog manager...')
+        await self.add_cog(CogManager(self))
 
         log.info('Loading cogs...')
         for filename in os.listdir('./src/cogs'):
@@ -60,9 +67,138 @@ class Bot(commands.Bot):
                 await self.load_extension(f'cogs.{filename[:-3]}')
                 log.debug(f'Loading Cog: {filename}')
                 continue
-            
+
             log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
 
+
+class CogManager(Cog):
+    """
+    Cog manager is incharge of loading, unloading and reloading cogs.
+    It is loaded seperately from other cogs so that it can not be
+    unloaded.
+    """
+
+    def __init__(self, bot:commands.Bot):
+        super().__init__(bot)
+
+    group = app_commands.Group(
+        name='cog',
+        description='Cog management commands',
+        guild_ids=(GUILD_ID,),
+        default_permissions=discord.Permissions(moderate_members=True)
+    )
+    
+    async def _cog_command_wrapper(
+        self,
+        inter:Inter,
+        cog:app_commands.Choice,
+        action:str,
+        func:Callable
+    ) -> None:
+        """Wrapper for using cog commands.
+        Handles errors and sends a message.
+
+        Args:
+            inter (Inter): discord.Interaction object.
+            cog (app_commands.Choice): the chosen cog.
+            action (str): what action is being performed.
+            func (Callable): the function to be called.
+        """
+
+        log.info(
+            f'{inter.user.name}#{inter.user.discriminator} '
+            f'({inter.user.id}) is {action}ing cog: {cog.name}'
+        )
+
+        try:
+            await func()
+
+        except commands.ExtensionAlreadyLoaded:            
+            # Action requires cog to be unloaded
+            await inter.response.send_message(
+                f'Cog `{cog.name}` is already loaded',
+                ephemeral=True
+            )
+            return
+
+        except commands.ExtensionNotLoaded:
+            # Action requires unloaded cog to be loaded
+            await inter.response.send_message(
+                f'Cog `{cog.name}` is not loaded',
+            )
+            return
+
+        except Exception as e:
+            # If this ever happens then I will shit myself
+            log.error(e.with_traceback())
+            await inter.response.send_message(
+                'Something has gone terribly wrong, '
+                'I\'ve logged the error... Good luck.'
+            )
+            return
+
+        # Send a success message to the user
+        await inter.response.send_message(
+            f'Cog `{cog.name}` {action} was successful!',
+            ephemeral=True
+        )
+
+    @group.command(name='load')
+    @app_commands.choices(cog=to_choices(list_cogs()))
+    async def load_cog(
+        self,
+        inter:Inter,
+        cog:app_commands.Choice[str]
+    ):
+        """Load one of the bots cogs."""
+
+        async def _load():
+            await self.bot.load_extension(f'cogs.{cog.name[:-3]}')
+
+        await self._cog_command_wrapper(
+            inter=inter,
+            cog=cog,
+            action='load',
+            func=_load
+        )
+
+    @group.command(name='unload')
+    @app_commands.choices(cog=to_choices(list_cogs()))
+    async def unload_cog(
+        self,
+        inter:Inter,
+        cog:app_commands.Choice[str]
+    ):
+        """Unload one of the bots cogs."""
+
+        async def _unload():
+            await self.bot.unload_extension(f'cogs.{cog.name[:-3]}')
+
+        await self._cog_command_wrapper(
+            inter=inter,
+            cog=cog,
+            action='unload',
+            func=_unload
+        )
+    
+    @group.command(name='reload')
+    @app_commands.choices(cog=to_choices(list_cogs()))
+    async def reload_cog(
+        self,
+        inter:Inter,
+        cog:app_commands.Choice[str]
+    ):
+        """Reload one of the bots cogs"""
+
+        async def _reload():
+            await self.bot.reload_extension(f'cogs.{cog.name[:-3]}')
+
+        await self._cog_command_wrapper(
+            inter=inter,
+            cog=cog,
+            action='reload',
+            func=_reload
+        )
 
 async def main():
     
