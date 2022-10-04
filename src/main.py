@@ -58,20 +58,21 @@ class Bot(commands.Bot):
         
         # The cog manager is loaded seperately so that it can not be
         # unloaded since it is used to unload other cogs.
-        log.info('Loading cog manager...')
-        await self.add_cog(CogManager(self))
+        cog_manager = CogManager(self)
+        log.info(f'Loading {cog_manager.qualified_name}')
+        await self.add_cog(cog_manager)
 
-        log.info('Loading cogs...')
+        log.info('Loading cog files')
         for filename in os.listdir('./src/cogs'):
             if filename.endswith('.py'):
                 await self.load_extension(f'cogs.{filename[:-3]}')
-                log.debug(f'Loading Cog: {filename}')
+                log.debug(f'Loading cog file: {filename}')
                 continue
 
             log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
 
 
-class CogManager(Cog):
+class CogManager(Cog, name='Cog Manager'):
     """
     Cog manager is incharge of loading, unloading and reloading cogs.
     It is loaded seperately from other cogs so that it can not be
@@ -199,6 +200,14 @@ class CogManager(Cog):
             action='reload',
             func=_reload
         )
+
+    @group.command(name='list')
+    async def list_cogs(self, inter:Inter):
+        """Responds with a list of all cogs."""
+        
+        output = '**List of cogs:**\n'
+        output += '\n'.join([fn[:-3] for fn in list_cogs()])
+        await inter.response.send_message(output, ephemeral=True)
 
 async def main():
     
