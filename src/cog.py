@@ -15,6 +15,7 @@ class Cog(commands.Cog):
     """
 
     def __init__(self, bot):
+        super().__init__()
         self.bot: commands.Bot = bot
         
     @commands.Cog.listener()
@@ -23,4 +24,5 @@ class Cog(commands.Cog):
         Method called when the cog has been loaded.
         Logs a ready message.
         """
-        log.info(f'Loaded Cog (NAME: {self.__class__.__name__})')
+        log.info(f'Loaded Cog (NAME: {self.qualified_name})')
+
