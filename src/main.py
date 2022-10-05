@@ -50,6 +50,15 @@ class Bot(commands.Bot):
         difference = int(round(time.time() - self.start_time))
         return timedelta(seconds=difference)
 
+    async def sync_slash_commands(self):
+        """Sync slash commands with discord"""
+
+        await self.wait_until_ready()
+        if not self.commands_synced:
+            await self.tree.sync(guild=self.main_guild)
+            self.commands_synced = True
+            log.info('Tree Commands Synced')
+
     async def on_ready(self):
         """
         Called when the bot logs in.
@@ -57,14 +66,10 @@ class Bot(commands.Bot):
         """
 
         # Sync slash commands
-        await self.wait_until_ready()
-        if not self.commands_synced:
-            await self.tree.sync(guild=self.main_guild)
-            self.commands_synced = True
-            log.info('Tree Commands Synced')
+        await self.sync_slash_commands()          
 
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        
+
         # Send a message into the discord log channel
         log_channel = self.get_channel(Channels.LOGS)
         await log_channel.send('**I\'m back online!**')
@@ -149,12 +154,17 @@ class CogManager(Cog, name='Cog Manager'):
             f'({inter.user.id}) is {action}ing cog: {cog.name}'
         )
 
+        await inter.response.defer(ephemeral=True)
+
         try:
+            #
+            self.bot.commands_synced = False
             await func()
+            await self.bot.sync_slash_commands()
 
         except commands.ExtensionAlreadyLoaded:            
             # Action requires cog to be unloaded
-            await inter.response.send_message(
+            await inter.followup.send(
                 f'Cog `{cog.name}` is already loaded',
                 ephemeral=True
             )
@@ -162,7 +172,7 @@ class CogManager(Cog, name='Cog Manager'):
 
         except commands.ExtensionNotLoaded:
             # Action requires unloaded cog to be loaded
-            await inter.response.send_message(
+            await inter.followup.send(
                 f'Cog `{cog.name}` is not loaded',
             )
             return
@@ -170,14 +180,14 @@ class CogManager(Cog, name='Cog Manager'):
         except Exception as e:
             # If this ever happens then I will shit myself
             log.error(e.with_traceback())
-            await inter.response.send_message(
+            await inter.followup.send(
                 'Something has gone terribly wrong, '
                 'I\'ve logged the error... Good luck.'
             )
             return
 
         # Send a success message to the user
-        await inter.response.send_message(
+        await inter.followup.send(
             f'Cog `{cog.name}` {action} was successful!',
             ephemeral=True
         )
