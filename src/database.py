@@ -52,6 +52,16 @@ def setup():
     #         user_id INTEGER PRIMARY KEY,
     #     """
     # )
+    
+    # Table for birthdays
+    t_debug('user_birthdays')
+    cur.execute(
+        """Create TABLE IF NOT EXISTS user_birthdays (
+            user_id INTEGER PRIMARY KEY,
+            birthday TEXT NOT NULL
+            )
+        """
+    )
 
     log.debug('Commiting Changes...')
     db.commit()

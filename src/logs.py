@@ -69,7 +69,7 @@ def update_log_levels(logger_names:tuple[str], level:int):
         logger=logging.getLogger(name)
         logger.setLevel(level)
 
-def setup_logs():
+def setup_logs() -> str:
     """
     Setup a logging queue handler and queue listener.
     Also creates a new log file for the current session and deletes old
@@ -86,9 +86,11 @@ def setup_logs():
         handlers=(queue_handler,),
         format='[%(asctime)s] %(levelname)s %(name)s: %(message)s'
     )
+    
+    file = _open_file()
 
     # Create handlers for the log output
-    file_handler = logging.StreamHandler(_open_file())
+    file_handler = logging.StreamHandler(file)
     sys_handler = logging.StreamHandler(sys.stdout)
 
     # Create a listener to handle the queue
@@ -97,9 +99,11 @@ def setup_logs():
     
     # Mute loud loggers
     update_log_levels(
-        ('discord', 'PIL', 'urllib3'),
+        ('discord', 'PIL', 'urllib3', 'aiosqlite'),
         logging.WARNING
     )
 
     # Clear up old log files
     _delete_old_logs()
+
+    return file.name
