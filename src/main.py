@@ -2,18 +2,20 @@
 
 
 import os
+import time
 import asyncio
 import logging
 import discord
 from discord import app_commands, Interaction as Inter
 from discord.ext import commands
+from datetime import timedelta
 from typing import Callable
 
 from cog import Cog
 from logs import setup_logs
 from utils import list_cogs, to_choices
 from database import setup as db_setup
-from constants import DATABASE, GUILD_ID, ACTIVITY_MSG
+from constants import DATABASE, GUILD_ID, ACTIVITY_MSG, Channels
 
 
 class Bot(commands.Bot):
@@ -23,10 +25,15 @@ class Bot(commands.Bot):
 
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
-    
+
     def __init__(self):
+        self.start_time = time.time()
+
+        # Setup the bot's intents
         intents = discord.Intents.all()
         super().__init__(command_prefix='!', intents=intents)
+
+        # Set the bot's activity status
         self.activity = discord.Game(name=ACTIVITY_MSG)
 
         # Create the database file if it doesnt exist
@@ -35,6 +42,13 @@ class Bot(commands.Bot):
 
         # Main discord server the bot is in
         self.main_guild = discord.Object(id=GUILD_ID)
+
+    @property
+    def uptime(self) -> timedelta:
+        """Returns the bot's uptime as a timedelta object"""
+
+        difference = int(round(time.time() - self.start_time))
+        return timedelta(seconds=difference)
 
     async def on_ready(self):
         """
@@ -50,7 +64,31 @@ class Bot(commands.Bot):
             log.info('Tree Commands Synced')
 
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
+        
+        # Send a message into the discord log channel
+        log_channel = self.get_channel(Channels.LOGS)
+        await log_channel.send('**I\'m back online!**')
     
+    async def close(self):
+        """Handles the shutdown process of the bot"""
+
+        log.info(f'Shutting down...')
+        filename = os.path.basename(self.log_filepath)
+
+        # Create a discord file object
+        file = discord.File(self.log_filepath, filename=filename)
+
+        # Send the log file to the logs channel
+        log_channel = self.get_channel(Channels.LOGS)
+        await log_channel.send(
+            'I\'m shutting down, here are the logs for this session.'
+            f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
+        )
+        await log_channel.send(file=file)
+
+        file.close()
+        await super().close()        
+
     async def load_cogs(self):
         """
         Attempts to load all .py files in the cogs directory as cogs.
@@ -212,7 +250,7 @@ class CogManager(Cog, name='Cog Manager'):
 async def main():
     
     # Setup logging before anything else
-    setup_logs()
+    log_filepath = setup_logs()
     
     # Get the root logger
     global log
@@ -222,13 +260,13 @@ async def main():
     with open('TOKEN', 'r', encoding='utf-8') as f:
         token = f.read()
 
-    bot = Bot()
-
     # Startup the bot    
-    async with bot:
+    async with Bot() as bot:
+        bot.log_filepath = log_filepath
         bot.tree.copy_global_to(guild=bot.main_guild)
         await bot.load_cogs()
         await bot.start(token)
+
 
 if __name__ == '__main__':
     asyncio.run(main())
