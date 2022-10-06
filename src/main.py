@@ -28,7 +28,7 @@ class Bot(commands.Bot):
     commands_synced = False
 
     def __init__(self, config:dict, log_filepath:str):
-        self.start_time = time.time()
+        self._start_time = time.time()
         self.config = config
         self.log_filepath = log_filepath
 
@@ -53,8 +53,15 @@ class Bot(commands.Bot):
     def uptime(self) -> timedelta:
         """Returns the bot's uptime as a timedelta object"""
 
-        difference = int(round(time.time() - self.start_time))
+        difference = int(round(time.time() - self._start_time))
         return timedelta(seconds=difference)
+
+    @property
+    def start_time(self) -> str:
+        """Returns the bot's start time as a string object"""
+
+        _time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._start_time))
+        return f'{_time}'
 
     async def sync_slash_commands(self):
         """Sync slash commands with discord"""
