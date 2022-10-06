@@ -7,7 +7,7 @@ from discord import app_commands, Interaction as Inter
 from datetime import datetime
 
 from cog import Cog
-from constants import DATABASE, GUILD_ID
+from constants import DATABASE
 
 
 log = logging.getLogger(__name__)
@@ -18,11 +18,11 @@ class BirthdayCog(Cog, name='Birthdays'):
 
     def __init__(self, bot):
         super().__init__(bot=bot)
+        self.group.guild_ids = (bot.main_guild.id,)
 
     group = app_commands.Group(
         name='birthday',
-        description='Birthday commands',
-        guild_ids=(GUILD_ID,),
+        description='Birthday commands'
     )
 
     @group.command(name='save')

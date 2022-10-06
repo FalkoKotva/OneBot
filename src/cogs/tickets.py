@@ -11,10 +11,7 @@ from discord.app_commands import Choice
 from cog import Cog
 from constants import (
     DATABASE,
-    GUILD_ID,
-    ADMIN_ROLE_ID,
     TICKET_SUBMITTED_MSG,
-    TICKETS_CATEGORY_ID,
     TicketType
 )
 from ui import ReportModal, SuggestionModal
@@ -31,12 +28,12 @@ class Tickets(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.group.guild_ids = (bot.main_guild.id,)
 
     # Ticket command group.
     group = app_commands.Group(
         name='ticket',
-        description='Open tickets here...',
-        guild_ids=(GUILD_ID,)
+        description='Open tickets here...'
     )
 
     async def create_ticket_channel(
@@ -50,9 +47,9 @@ class Tickets(Cog):
         log.debug(f'Creating new ticket channel for ticket #{ticket_id}')
 
         # The guild and category where the new channel will be created
-        guild: discord.Guild = self.bot.get_guild(GUILD_ID)
+        guild: discord.Guild = self.bot.main_guild
         category: discord.CategoryChannel = discord.Object(
-            id=TICKETS_CATEGORY_ID
+            id=self.bot.config['guild']['category_ids']['tickets']
         )
 
         # Return the newly created ticket channel
@@ -255,7 +252,7 @@ class Tickets(Cog):
         Choice(name='report ticket', value=TicketType.REPORT.value),
         Choice(name='suggestion ticket', value=TicketType.SUGGESTION.value)
     ])
-    @app_commands.checks.has_any_role(ADMIN_ROLE_ID)
+    # @app_commands.checks.has_any_role(ADMIN_ROLE_ID)
     async def close_ticket(
         self,
         interaction:discord.Interaction,
@@ -301,7 +298,7 @@ class Tickets(Cog):
             await db.commit()
 
         # Delete the ticket channel
-        guild: discord.Guild = self.bot.get_guild(GUILD_ID)
+        guild: discord.Guild = self.bot.main_guild
         await guild.get_channel(channel_id).delete(reason='Ticket closed')
 
         await send(

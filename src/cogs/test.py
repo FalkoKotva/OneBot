@@ -7,7 +7,6 @@ import discord
 from discord import app_commands
 
 from cog import Cog
-from constants import GUILD_ID
 from ui import ReportModal
 
 
@@ -18,12 +17,12 @@ class Testing(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.group.guild_ids = (bot.main_guild.id,)
 
     # Test command group.
     group = app_commands.Group(
         name='test',
-        description='Test commands...',
-        guild_ids=(GUILD_ID,)
+        description='Test commands...'
     )
     
     @group.command(name='response')
