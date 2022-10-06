@@ -44,7 +44,6 @@ class Bot(commands.Bot):
             db_setup()
 
         main_guild_id = config['guild']['id']
-        print(type(main_guild_id))
 
         # Main discord server the bot is in
         self.main_guild = discord.Object(id=main_guild_id)
@@ -60,11 +59,13 @@ class Bot(commands.Bot):
     async def sync_slash_commands(self):
         """Sync slash commands with discord"""
 
+        log.info('Syncing App Commands')
+
         await self.wait_until_ready()
         if not self.commands_synced:
             await self.tree.sync(guild=self.main_guild)
             self.commands_synced = True
-            log.info('Tree Commands Synced')
+            log.info('App Commands Synced')
 
     async def on_ready(self):
         """
@@ -72,10 +73,9 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
-        # Sync slash commands
-        await self.sync_slash_commands()          
-
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
+        await self.load_cogs()
+        await self.sync_slash_commands()     
 
         log_channel_id = self.config['guild']['channel_ids']['logs']
 
@@ -287,7 +287,6 @@ async def main():
 
     # Startup the bot    
     async with Bot(config, log_filepath) as bot:
-        await bot.load_cogs()
         await bot.start(token)
 
 
