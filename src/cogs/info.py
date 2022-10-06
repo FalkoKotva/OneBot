@@ -1,5 +1,6 @@
 """Cog for info commands."""
 
+import time
 import logging
 import platform
 import discord
@@ -22,16 +23,23 @@ class InfoCog(Cog, name='Info'):
     async def get_all_info(self, inter:Inter):
         """Get all info on the bot."""
 
+        dpy_ver = discord.__version__
         py_ver = platform.python_version()
-        system = platform.system()
         uptime = str(self.bot.uptime)
+        start_time = str(self.bot.start_time)
 
         embed = discord.Embed(
-            title='Info',
+            title='Server Details',
             description='```'
             f'Python Ver: {py_ver}\n'
-            f'System: {system}\n'
+            f'Discord.py Ver: {dpy_ver}\n'
+            '---\n'
+            f'OS: {platform.system()}\n'
+            f'OS Ver: {platform.version()}\n'
+            '---\n'
             f'Uptime: {uptime}\n'
+            f'Started: {start_time}\n'
+            f'Timezone: {time.tzname[1]}\n'
             '```',
             colour=discord.Colour.blurple()
         )
