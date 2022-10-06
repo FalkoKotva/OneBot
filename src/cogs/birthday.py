@@ -1,13 +1,16 @@
 """Cog for info commands."""
 
+import asyncio
 import logging
+import schedule
 import aiosqlite
 import discord
 from discord import app_commands, Interaction as Inter
+from discord.ext import commands
 from datetime import datetime
 
 from cog import Cog
-from constants import DATABASE, GUILD_ID
+from constants import DATABASE
 
 
 log = logging.getLogger(__name__)
@@ -18,11 +21,25 @@ class BirthdayCog(Cog, name='Birthdays'):
 
     def __init__(self, bot):
         super().__init__(bot=bot)
+        self.group.guild_ids = (bot.main_guild.id,)
+        schedule.every().day.at("21:25").do(lambda: asyncio.run(self.check_birthdays()))
+
+    async def check_birthdays(self):
+        print('something')
+        
+    async def daily_task(self):
+        while True:
+            schedule.run_pending()
+            print('something first')
+            asyncio.sleep(1)
+
+    # @commands.Cog.listener()
+    # async def on_ready(self):
+    #     self.bot.loop.create_task(self.daily_task())
 
     group = app_commands.Group(
         name='birthday',
-        description='Birthday commands',
-        guild_ids=(GUILD_ID,),
+        description='Birthday commands'
     )
 
     @group.command(name='save')

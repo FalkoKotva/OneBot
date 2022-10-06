@@ -7,7 +7,6 @@ from discord.ext import commands
 from datetime import datetime
 
 from cog import Cog
-from constants import GUILD_ID, Channels
 
 
 class Welcome(Cog):
@@ -15,6 +14,8 @@ class Welcome(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.group.guild_ids = (bot.main_guild.id,)
+        self.welcome_channel_id = bot.config['guild']['channel_ids']['welcome']
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
@@ -25,7 +26,7 @@ class Welcome(Cog):
         """
 
         embed = await self.get_welcome_embed(member)
-        channel = self.bot.get_channel(Channels.WELCOME)
+        channel = self.bot.get_channel(self.welcome_channel_id)
         await channel.send(embed=embed)
         
     @commands.Cog.listener()
@@ -37,13 +38,12 @@ class Welcome(Cog):
         """
 
         embed = await self.get_remove_embed(member)
-        channel = self.bot.get_channel(Channels.WELCOME)
+        channel = self.bot.get_channel(self.welcome_channel_id)
         await channel.send(embed=embed)
     
     group = app_commands.Group(
         name='wtest',
         description='Test the join/leave events',
-        guild_ids=(GUILD_ID,),
         default_permissions=discord.Permissions(moderate_members=True)
     )
     
@@ -81,13 +81,15 @@ class Welcome(Cog):
             discord.Embed: The welcome embed.
         """
 
+        channels = self.bot.config['guild']['channel_ids']
+
         # Channels to be added to the embed
-        rules_channel = self.bot.get_channel(Channels.RULES)
-        roles_channel = self.bot.get_channel(Channels.ROLES)
-        mental_channel = self.bot.get_channel(Channels.MENTAL_HEALTH)
-        fhelp_channel = self.bot.get_channel(Channels.FIND_HELP)
-        ticket_channel = self.bot.get_channel(Channels.ASK_TICKETS)
-        ahelp_channel = self.bot.get_channel(Channels.ASK_HELP)
+        rules_channel = self.bot.get_channel(channels['rules'])
+        roles_channel = self.bot.get_channel(channels['roles'])
+        mental_channel = self.bot.get_channel(channels['mental_health_info'])
+        fhelp_channel = self.bot.get_channel(channels['mental_health_help'])
+        ticket_channel = self.bot.get_channel(channels['tickets'])
+        ahelp_channel = self.bot.get_channel(channels['ask_help'])
 
         # The embed base
         embed = discord.Embed(
@@ -136,7 +138,7 @@ class Welcome(Cog):
             timestamp=datetime.now()
         )
 
-        icon_url = self.bot.get_guild(GUILD_ID).icon.url
+        icon_url = self.bot.main_guild.icon.url
 
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
