@@ -3,6 +3,7 @@
 
 import os
 import time
+import json
 import asyncio
 import logging
 import discord
@@ -15,7 +16,7 @@ from cog import Cog
 from logs import setup_logs
 from utils import list_cogs, to_choices
 from database import setup as db_setup
-from constants import DATABASE, GUILD_ID, ACTIVITY_MSG, Channels
+from constants import DATABASE, ACTIVITY_MSG
 
 
 class Bot(commands.Bot):
@@ -26,8 +27,10 @@ class Bot(commands.Bot):
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
 
-    def __init__(self):
+    def __init__(self, config:dict, log_filepath:str):
         self.start_time = time.time()
+        self.config = config
+        self.log_filepath = log_filepath
 
         # Setup the bot's intents
         intents = discord.Intents.all()
@@ -40,8 +43,11 @@ class Bot(commands.Bot):
         if not os.path.exists(DATABASE):
             db_setup()
 
+        main_guild_id = config['guild']['id']
+
         # Main discord server the bot is in
-        self.main_guild = discord.Object(id=GUILD_ID)
+        self.main_guild = discord.Object(id=main_guild_id)
+        self.tree.copy_global_to(guild=self.main_guild)
 
     @property
     def uptime(self) -> timedelta:
@@ -53,11 +59,13 @@ class Bot(commands.Bot):
     async def sync_slash_commands(self):
         """Sync slash commands with discord"""
 
+        log.info('Syncing App Commands')
+
         await self.wait_until_ready()
         if not self.commands_synced:
             await self.tree.sync(guild=self.main_guild)
             self.commands_synced = True
-            log.info('Tree Commands Synced')
+            log.info('App Commands Synced')
 
     async def on_ready(self):
         """
@@ -65,13 +73,14 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
-        # Sync slash commands
-        await self.sync_slash_commands()          
-
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')
+        await self.load_cogs()
+        await self.sync_slash_commands()     
+
+        log_channel_id = self.config['guild']['channel_ids']['logs']
 
         # Send a message into the discord log channel
-        log_channel = self.get_channel(Channels.LOGS)
+        log_channel = self.get_channel(log_channel_id)
         await log_channel.send('**I\'m back online!**')
     
     async def close(self):
@@ -83,8 +92,10 @@ class Bot(commands.Bot):
         # Create a discord file object
         file = discord.File(self.log_filepath, filename=filename)
 
+        log_channel_id = self.config['guild']['channel_ids']['logs']
+
         # Send the log file to the logs channel
-        log_channel = self.get_channel(Channels.LOGS)
+        log_channel = self.get_channel(log_channel_id)
         await log_channel.send(
             'I\'m shutting down, here are the logs for this session.'
             f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
@@ -100,7 +111,7 @@ class Bot(commands.Bot):
         """
         
         # The cog manager is loaded seperately so that it can not be
-        # unloaded since it is used to unload other cogs.
+        # unloaded because it is used to unload other cogs.
         cog_manager = CogManager(self)
         log.info(f'Loading {cog_manager.qualified_name}')
         await self.add_cog(cog_manager)
@@ -124,11 +135,11 @@ class CogManager(Cog, name='Cog Manager'):
 
     def __init__(self, bot:commands.Bot):
         super().__init__(bot)
+        self.group.guild_ids = (bot.main_guild.id)
 
     group = app_commands.Group(
         name='cog',
         description='Cog management commands',
-        guild_ids=(GUILD_ID,),
         default_permissions=discord.Permissions(moderate_members=True)
     )
     
@@ -270,11 +281,12 @@ async def main():
     with open('TOKEN', 'r', encoding='utf-8') as f:
         token = f.read()
 
+    # Get the bot config
+    with open('./data/test.config.json', 'r', encoding='utf-8') as f:
+        config = json.load(f)
+
     # Startup the bot    
-    async with Bot() as bot:
-        bot.log_filepath = log_filepath
-        bot.tree.copy_global_to(guild=bot.main_guild)
-        await bot.load_cogs()
+    async with Bot(config, log_filepath) as bot:
         await bot.start(token)
 
 

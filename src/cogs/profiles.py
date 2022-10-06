@@ -7,7 +7,6 @@ from discord import app_commands
 
 from cog import Cog
 from ui import ProfileImage
-from constants import GUILD_ID
 
 
 class Profiles(Cog):
@@ -17,16 +16,16 @@ class Profiles(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.profile_group.guild_ids = (bot.main_guild.id,)
+        self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
     # Test command group.
     profile_group = app_commands.Group(
         name='profile',
-        description='Profile commands...',
-        guild_ids=(GUILD_ID,)
+        description='Profile commands...'
     )
     
     @app_commands.command(name='member')
-    @app_commands.guilds(GUILD_ID)
     @app_commands.describe(ephemeral='Hide the result from other users?')
     async def get_member_profile(self, interaction:discord.Interaction, member:discord.Member, ephemeral:bool=False):
         """
