@@ -1,6 +1,5 @@
 """Entry point for the bot. Run this file to get things started."""
 
-
 import os
 import time
 import json
@@ -12,7 +11,7 @@ from discord.ext import commands
 from datetime import timedelta
 from typing import Callable
 
-from cog import Cog
+from cog import BaseCog
 from logs import setup_logs
 from utils import list_cogs, to_choices
 from database import setup as db_setup
@@ -25,7 +24,6 @@ class Bot(commands.Bot):
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
 
-    _cogs_loaded = False
     config: dict
     log_filepath: str
 
@@ -91,10 +89,6 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
-        while not self._cogs_loaded:
-            asyncio.sleep(1)
-            print('sleep time')
-
         await self.sync_slash_commands()
 
         log.info(f'Logged in as {self.user} (ID: {self.user.id})')   
@@ -147,10 +141,8 @@ class Bot(commands.Bot):
 
             log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
 
-        self._cogs_loaded = True
 
-
-class CogManager(Cog, name='Cog Manager'):
+class CogManager(BaseCog, name='Cog Manager'):
     """
     Cog manager is incharge of loading, unloading and reloading cogs.
     It is loaded seperately from other cogs so that it can not be
