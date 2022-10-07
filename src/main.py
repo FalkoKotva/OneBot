@@ -278,8 +278,12 @@ class CogManager(Cog, name='Cog Manager'):
 async def main():
     
     # Get the bot config
-    with open('./data/test.config.json', 'r', encoding='utf-8') as f:
-        config = json.load(f)
+    try:
+        with open('./data/test.config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        print('CRITICAL ERROR: config file is missing! Shutting down...')
+        return
 
     # Setup logging before anything else
     log_level = config['log_level']
@@ -290,8 +294,14 @@ async def main():
     log = logging.getLogger('main')
 
     # Get the secret token
-    with open('TOKEN', 'r', encoding='utf-8') as f:
-        token = f.read()
+    try:
+        with open('TOKEN', 'r', encoding='utf-8') as f:
+            token = f.read()
+    except FileNotFoundError:
+        log.critical(
+            'TOKEN file not found in project root! Shutting down...'
+        )
+        return
 
     # Startup the bot    
     async with Bot(config, log_filepath) as bot:
