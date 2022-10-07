@@ -54,12 +54,9 @@ class Bot(commands.Bot):
         if not os.path.exists(DATABASE):
             db_setup()
 
-        self.main_guild_id = config['guild']['id']
-
         # Get the main discord server
+        self.main_guild_id = config['guild']['id']
         self.main_guild = discord.Object(id=self.main_guild_id)
-
-        self.tree.copy_global_to(guild=self.main_guild)
 
     @property
     def uptime(self) -> timedelta:
@@ -84,7 +81,7 @@ class Bot(commands.Bot):
         await self.wait_until_ready()
 
         if not self.commands_synced:
-            await self.tree.sync(guild=self.main_guild)
+            await self.tree.sync()
             self.commands_synced = True
             log.info('App Commands Synced')
 
