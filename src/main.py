@@ -277,8 +277,13 @@ class CogManager(Cog, name='Cog Manager'):
 
 async def main():
     
+    # Get the bot config
+    with open('./data/test.config.json', 'r', encoding='utf-8') as f:
+        config = json.load(f)
+
     # Setup logging before anything else
-    log_filepath = setup_logs()
+    log_level = config['log_level']
+    log_filepath = setup_logs(log_level=log_level)
     
     # Get the root logger
     global log
@@ -287,10 +292,6 @@ async def main():
     # Get the secret token
     with open('TOKEN', 'r', encoding='utf-8') as f:
         token = f.read()
-
-    # Get the bot config
-    with open('./data/test.config.json', 'r', encoding='utf-8') as f:
-        config = json.load(f)
 
     # Startup the bot    
     async with Bot(config, log_filepath) as bot:
