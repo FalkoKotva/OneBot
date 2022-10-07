@@ -281,7 +281,8 @@ class CogManager(BaseCog, name='Cog Manager'):
         """Responds with a list of all cogs."""
         
         output = '**List of cogs:**\n'
-        output += '\n'.join([fn[:-3] for fn in list_cogs()])
+        cogs = self.bot.cogs.values()
+        output += '\n'.join([cog.qualified_name for cog in cogs])
         await inter.response.send_message(output, ephemeral=True)
 
 async def main():
