@@ -25,6 +25,16 @@ class InfoCog(BaseCog, name='Server'):
     )
     
     @group.command(name='shutdown')
+    async def server_shutdown(self, inter:Inter):
+        """Shutdown the bot"""
+        log.info(
+            f'{inter.user.name}#{inter.user.discriminator} '
+            f'({inter.user.id}) is shutting down the bot'
+        )
+        await inter.response.send_message('Shutting down...')
+        await self.bot.close()
+
+
 
     @group.command(name='info')
     async def server_info(self, inter:Inter):
