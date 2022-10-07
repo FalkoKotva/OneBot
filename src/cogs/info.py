@@ -6,13 +6,13 @@ import platform
 import discord
 from discord import app_commands, Interaction as Inter
 
-from cog import Cog
+from cog import BaseCog
 
 
 log = logging.getLogger(__name__)
 
 
-class InfoCog(Cog, name='Info'):
+class InfoCog(BaseCog, name='Info'):
     """Cog for info commands."""
 
     def __init__(self, bot):

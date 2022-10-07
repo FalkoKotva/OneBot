@@ -6,11 +6,10 @@ Cog for testing.
 import discord
 from discord import app_commands
 
-from cog import Cog
-from ui import ReportModal
+from cog import BaseCog
 
 
-class Testing(Cog):
+class Testing(BaseCog):
     """
     Cog for testing.
     """

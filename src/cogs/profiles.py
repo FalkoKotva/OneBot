@@ -5,11 +5,11 @@ Cog for handling tickets.
 import discord
 from discord import app_commands
 
-from cog import Cog
+from cog import BaseCog
 from ui import ProfileImage
 
 
-class Profiles(Cog):
+class Profiles(BaseCog):
     """
     Cog for custom profiles.
     """

@@ -6,10 +6,10 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 
-from cog import Cog
+from cog import BaseCog
 
 
-class Welcome(Cog):
+class Welcome(BaseCog):
     """Cog for welcoming new members"""
 
     def __init__(self, bot):

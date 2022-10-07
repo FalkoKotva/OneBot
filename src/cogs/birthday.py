@@ -9,14 +9,14 @@ from discord import app_commands, Interaction as Inter
 from discord.ext import commands
 from datetime import datetime
 
-from cog import Cog
+from cog import BaseCog
 from constants import DATABASE
 
 
 log = logging.getLogger(__name__)
 
 
-class BirthdayCog(Cog, name='Birthdays'):
+class BirthdayCog(BaseCog, name='Birthdays'):
     """Cog for info commands."""
 
     def __init__(self, bot):

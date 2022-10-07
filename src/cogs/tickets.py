@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.app_commands import Choice
 
-from cog import Cog
+from cog import BaseCog
 from constants import (
     DATABASE,
     TICKET_SUBMITTED_MSG,
@@ -21,7 +21,7 @@ from utils import get_member
 log = logging.getLogger(__name__)
 
 
-class Tickets(Cog):
+class Tickets(BaseCog):
     """
     Cog for handling tickets.
     """
