@@ -28,7 +28,6 @@ class Tickets(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.group.guild_ids = (bot.main_guild.id,)
 
     # Ticket command group.
     group = app_commands.Group(

@@ -17,7 +17,6 @@ class Testing(Cog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.group.guild_ids = (bot.main_guild.id,)
 
     # Test command group.
     group = app_commands.Group(
