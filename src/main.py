@@ -313,10 +313,17 @@ async def main():
         )
         return
 
-    # Startup the bot    
-    async with Bot(config, log_filepath) as bot:
-        await bot.load_cogs()
-        await bot.start(token)
+    # Startup the bot
+    bot = Bot(config, log_filepath)
+    await bot.load_cogs()
+    
+    try:
+        await bot.start(token, reconnect=True)
+    except discord.LoginFailure:
+        log.critical(
+            'You have passed an improper or invalid token! '
+            'Shutting down...'
+        )
 
 
 if __name__ == '__main__':
