@@ -3,6 +3,7 @@ Cog class for all cogs to inherit from
 """
 
 import logging
+from discord import app_commands
 from discord.ext import commands
 from typing import Callable, Coroutine
 
@@ -34,12 +35,3 @@ class Cog(commands.Cog):
 
         if callable(self._async_post_ready):
             await self._async_post_ready()
-
-        self._set_guild_commands()
-    
-    def _set_guild_commands(self):
-        """Sets the guilds for all commands in the cog."""
-        for command in self.get_app_commands():
-            print(command.qualified_name)
-            command._guild_ids = (self.bot.main_guild.id,)
-
