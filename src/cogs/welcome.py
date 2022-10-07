@@ -117,9 +117,12 @@ class Welcome(Cog):
                 \n{ahelp_channel.mention}'
         )
 
+        guild = self.bot.get_guild(self.bot.main_guild_id)
+        icon_url = guild.icon.url
+
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
-        embed.set_footer(text='DCG Server', icon_url=rules_channel.guild.icon.url)
+        embed.set_footer(text='DCG Server', icon_url=icon_url)
 
         return embed
 
@@ -138,7 +141,8 @@ class Welcome(Cog):
             timestamp=datetime.now()
         )
 
-        icon_url = self.bot.main_guild.icon.url
+        guild = self.bot.get_guild(self.bot.main_guild_id)
+        icon_url = guild.icon.url
 
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)

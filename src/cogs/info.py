@@ -17,7 +17,7 @@ class InfoCog(Cog, name='Info'):
 
     def __init__(self, bot):
         super().__init__(bot=bot)
-        self.get_app_commands()[0].guilds = (bot.main_guild.id,)
+        # self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
     @app_commands.command(name='serverinfo')
     async def get_all_info(self, inter:Inter):

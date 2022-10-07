@@ -17,6 +17,7 @@ class Profiles(Cog):
     def __init__(self, bot):
         super().__init__(bot)
         self.profile_group.guild_ids = (bot.main_guild.id,)
+        print(bot.main_guild.id)
         self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
     # Test command group.

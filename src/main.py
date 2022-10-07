@@ -20,33 +20,45 @@ from constants import DATABASE, ACTIVITY_MSG
 
 
 class Bot(commands.Bot):
-    """
-    This class is the root of the bot, all cogs are loaded from here.
-    """
+    """This class is the root of the bot."""
 
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
 
+    _cogs_loaded = False
+    config: dict
+    log_filepath: str
+
     def __init__(self, config:dict, log_filepath:str):
-        self._start_time = time.time()
+        """Initialize the bot.
+
+        Args:
+            config (dict): The config data.
+            log_filepath (str): Log filepath for the current session.
+        """
+
         self.config = config
         self.log_filepath = log_filepath
 
+        # Use this to roughly track the uptime
+        self._start_time = time.time()
+
         # Setup the bot's intents
         intents = discord.Intents.all()
-        super().__init__(command_prefix='!', intents=intents)
+        super().__init__(command_prefix='ob ', intents=intents)
 
         # Set the bot's activity status
         self.activity = discord.Game(name=ACTIVITY_MSG)
 
-        # Create the database file if it doesnt exist
+        # Create the database file if it doesnt exist, set it up
         if not os.path.exists(DATABASE):
             db_setup()
 
-        main_guild_id = config['guild']['id']
+        self.main_guild_id = config['guild']['id']
 
-        # Main discord server the bot is in
-        self.main_guild = discord.Object(id=main_guild_id)
+        # Get the main discord server
+        self.main_guild = discord.Object(id=self.main_guild_id)
+
         self.tree.copy_global_to(guild=self.main_guild)
 
     @property
@@ -68,7 +80,9 @@ class Bot(commands.Bot):
 
         log.info('Syncing App Commands')
 
+        # Syncing requires a ready bot
         await self.wait_until_ready()
+
         if not self.commands_synced:
             await self.tree.sync(guild=self.main_guild)
             self.commands_synced = True
@@ -80,9 +94,13 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
-        log.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        await self.load_cogs()
-        await self.sync_slash_commands()     
+        while not self._cogs_loaded:
+            asyncio.sleep(1)
+            print('sleep time')
+
+        await self.sync_slash_commands()
+
+        log.info(f'Logged in as {self.user} (ID: {self.user.id})')   
 
         log_channel_id = self.config['guild']['channel_ids']['logs']
 
@@ -131,6 +149,8 @@ class Bot(commands.Bot):
                 continue
 
             log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
+
+        self._cogs_loaded = True
 
 
 class CogManager(Cog, name='Cog Manager'):
@@ -305,6 +325,7 @@ async def main():
 
     # Startup the bot    
     async with Bot(config, log_filepath) as bot:
+        await bot.load_cogs()
         await bot.start(token)
 
 

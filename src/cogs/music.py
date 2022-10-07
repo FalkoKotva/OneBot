@@ -274,6 +274,7 @@ class VoiceState:
 
 class Music(Cog):
     def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
         self.bot = bot
         self.voice_states = {}
 
