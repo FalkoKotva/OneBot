@@ -7,6 +7,7 @@ import discord
 from discord import app_commands, Interaction as Inter
 
 from cog import BaseCog
+from utils import check_is_owner
 
 
 log = logging.getLogger(__name__)
@@ -17,7 +18,6 @@ class InfoCog(BaseCog, name='Server'):
 
     def __init__(self, bot):
         super().__init__(bot=bot)
-        # self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
     group = app_commands.Group(
         name='server',
@@ -25,6 +25,8 @@ class InfoCog(BaseCog, name='Server'):
     )
     
     @group.command(name='shutdown')
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.check(check_is_owner)
     async def server_shutdown(self, inter:Inter):
         """Shutdown the bot"""
         log.info(
