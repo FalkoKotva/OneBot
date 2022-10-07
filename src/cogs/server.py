@@ -12,16 +12,23 @@ from cog import BaseCog
 log = logging.getLogger(__name__)
 
 
-class InfoCog(BaseCog, name='Info'):
+class InfoCog(BaseCog, name='Server'):
     """Cog for info commands."""
 
     def __init__(self, bot):
         super().__init__(bot=bot)
         # self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
-    @app_commands.command(name='serverinfo')
-    async def get_all_info(self, inter:Inter):
-        """Get all info on the bot."""
+    group = app_commands.Group(
+        name='server',
+        description='Server commands'
+    )
+    
+    @group.command(name='shutdown')
+
+    @group.command(name='info')
+    async def server_info(self, inter:Inter):
+        """Get info on the bot & server."""
 
         # Get the info
         dpy_ver = discord.__version__
