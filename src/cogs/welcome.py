@@ -116,8 +116,11 @@ class Welcome(BaseCog):
                 \n{ahelp_channel.mention}'
         )
 
-        guild = self.bot.get_guild(self.bot.main_guild_id)
-        icon_url = guild.icon.url
+        # Get the icon url footer if it exists
+        try:
+            icon_url = member.guild.icon.url
+        except AttributeError:
+            icon_url = None
 
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
@@ -126,7 +129,7 @@ class Welcome(BaseCog):
         return embed
 
     async def get_remove_embed(self, member:discord.Member):
-        """_summary_
+        """Returns a remove embed for the passed user.
 
         Args:
             member (discord.Member): _description_
@@ -135,13 +138,17 @@ class Welcome(BaseCog):
         # The embed base
         embed = discord.Embed(
             title='Goodbye, you won\'t be missed!',
-            description=f'{member.mention} has left the server.',
+            description=f'{member.mention} has left the server.'
+                '\nAllow me to reach for my tiny violin.',
             colour=discord.Colour.from_str('#00FEFE'),
             timestamp=datetime.now()
         )
 
-        guild = self.bot.get_guild(self.bot.main_guild_id)
-        icon_url = guild.icon.url
+        # Get the icon url footer if it exists
+        try:
+            icon_url = member.guild.icon.url
+        except AttributeError:
+            icon_url = None
 
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
@@ -152,6 +159,7 @@ class Welcome(BaseCog):
 
 async def setup(bot):
     """Setup the welcome cog"""
+
     await bot.add_cog(
         Welcome(bot),
         guilds=(bot.main_guild,)
