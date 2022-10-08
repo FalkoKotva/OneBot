@@ -102,6 +102,31 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
+    @group.commands(name='list')
+    @app_commands.default_permissions(moderate_members=True)
+    async def list_birthdays(self, inter:Inter):
+        """Returns list of members and their birthdays."""
+        
+        async with aiosqlite.connect(DATABASE) as db:
+            data = await db.execute_fetchall(
+                "SELECT user_id, birthday FROM user_birthdays"
+            )
+        
+        if not data:
+            inter.response.send_message(
+                'There are no birthdays in the database.',
+                ephemeral=True
+            )
+
+        bday_list = [
+            f'{member.mention}: {bday}' for member, bday in data
+        ]
+
+        await inter.response.send_message(
+            '\n'.join(bday_list),
+            ephemeral=True
+        )
+
     @group.command(name='celebrate')
     @app_commands.default_permissions(moderate_members=True)
     async def force_celebrate_birthday(
@@ -171,28 +196,32 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                     ephemeral=True
                 )
                 return
-        
+
+        log.info(f'Birthday saved for {inter.user.display_name} at {birthday}')
+
         await inter.response.send_message(
             'I\'ve saved your special date, I can\'t wait to wish you a happy birthday!',
             ephemeral=True
         )
-    
+
     @group.command(name='forget')
     async def remove_birthday(self, inter:Inter):
         """Remove your birthday from the database."""
-        
+
         async with aiosqlite.connect(DATABASE) as db:
             await db.execute(
                 """DELETE FROM user_birthdays WHERE user_id = ?""",
                 (inter.user.id,)
             )
             await db.commit()
-        
+
+        log.info(f'Birthday removed for {inter.user.display_name}')
+
         await inter.response.send_message(
             'If I knew it, I\'ve forgotten your birthday!',
             ephemeral=True
         )
-    
+
     @group.command(name='see')
     async def get_birthday(self, inter:Inter):
         """See your birthday if it is saved."""
@@ -202,14 +231,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                 """SELECT birthday FROM user_birthdays WHERE user_id = ?""",
                 (inter.user.id,)
             )
-        
+
         if not data:
             await inter.response.send_message(
                 'I don\'t know your birthday, sorry!'
                 '\nYou can save it with `/birthday save DD/MM/YYYY`',
             )
             return
-        
+
         await inter.response.send_message(f'Your birthday is on {data[0][0]}!')
 
 

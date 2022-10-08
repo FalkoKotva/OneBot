@@ -55,3 +55,15 @@ def check_is_owner(inter:Inter) -> bool:
     result = inter.user.id == 377453890523627522
     log.debug(f'Checking if user ({inter.user.id}) is owner {result}')
     return result
+
+def normalized_name(member:discord.Member, with_id:bool=True) -> str:
+    """Returns the member's name followed by their
+    discriminator and ID.
+    
+    Args:
+        member (discord.Member): The member to get the name of.
+        with_id (bool, optional): Whether to include the ID. Defaults to True.
+    """
+
+    output = f'{member.name}#{member.discriminator}'
+    return output if not with_id else f'{output} ({member.id})'
