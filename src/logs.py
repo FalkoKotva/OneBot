@@ -58,7 +58,7 @@ def _delete_old_logs():
         
         age = datetime.now() - log_date
         if age >= timedelta(days=MAX_LOGFILE_AGE_DAYS):
-            log.info('Removing expired log file: {path.name}')
+            log.info(f'Removing expired log file: {path.name}')
             path.unlink()
 
 def update_log_levels(logger_names:tuple[str], level:int):
