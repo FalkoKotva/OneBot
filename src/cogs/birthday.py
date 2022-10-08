@@ -102,6 +102,25 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
+    @group.command(name='celebrate')
+    @app_commands.default_permissions(moderate_members=True)
+    async def force_celebrate_birthday(
+        self,
+        inter:Inter,
+        member:discord.Member,
+        age:int = 0
+    ):
+        """
+        Celebrate a birthday regardless of if it is actually
+        their birthday or not.
+        """
+
+        await self.celebrate_birthday(member.id, age)
+        await inter.response.send_message(
+            'Birthday celebrated!',
+            ephemeral=True
+        )
+
     @group.command(name='check')
     @app_commands.default_permissions(moderate_members=True)
     async def force_check_birthdays(self, inter:Inter):
