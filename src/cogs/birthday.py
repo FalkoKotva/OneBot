@@ -131,17 +131,33 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
     @group.command(name='save')
     async def add_birthday(self, inter:Inter, birthday:str):
-        """Save your birthday and recieve a happy birthday message on your birthday."""
-        
+        """
+        Save your birthday and recieve a happy birthday message
+        on your birthday.
+        """
+
+        # Convert the string to a datetime object
         try:
-            datetime.strptime(birthday, '%d/%m/%Y')
+            bday = datetime.strptime(birthday, '%d/%m/%Y')
         except ValueError:
             await inter.response.send_message(
                 'Invalid date format, please use DD/MM/YYYY',
                 ephemeral=True
             )
             return
-    
+
+        now = datetime.now()
+        valid_range = range(now.year-40, now.year-12)
+        str_range = f'{valid_range.start} & {valid_range.stop-1}'
+
+        # Check that the date range is valid
+        if bday.year not in valid_range:
+            await inter.response.send_message(
+                f'Invalid year, please use a year between {str_range}',
+                ephemeral=True
+            )
+            return
+
         async with aiosqlite.connect(DATABASE) as db:
             try:
                 await db.execute(
