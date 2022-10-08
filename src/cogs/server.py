@@ -23,7 +23,32 @@ class InfoCog(BaseCog, name='Server'):
         name='server',
         description='Server commands'
     )
-    
+
+    def _get_data(self) -> dict:
+        return {
+            'Bot': {
+                'Name': self.bot.user.name,
+                'Descriminator': f'#{self.bot.user.discriminator}',
+                'ID': self.bot.user.id,
+            },
+            'Dependencies': {
+                'Python': platform.python_version(),
+                'Discord.py': discord.__version__,
+            },
+            'Server': {
+                'OS': platform.system(),
+                'OS Version': platform.release(),
+            },
+            'Runtime': {
+                'Uptime': str(self.bot.uptime),
+                'Start Time': self.bot.start_time,
+                'Timezone': time.tzname[1],
+            },
+            'Network': {
+                'Latency': f'{round(self.bot.latency*1000, 2)}ms',
+            }
+        }
+
     @group.command(name='shutdown')
     @app_commands.default_permissions(administrator=True)
     @app_commands.check(check_is_owner)
@@ -36,34 +61,39 @@ class InfoCog(BaseCog, name='Server'):
         await inter.response.send_message('Shutting down...')
         await self.bot.close()
 
+    @group.command(name='uptime')
+    async def server_uptime(self, inter:Inter):
+        """Get the uptime of the bot."""
 
+        uptime = str(self.bot.uptime)
+        await inter.response.send_message(f'Uptime: {uptime}', ephemeral=True)
 
     @group.command(name='info')
     async def server_info(self, inter:Inter):
         """Get info on the bot & server."""
 
-        # Get the info
-        dpy_ver = discord.__version__
-        py_ver = platform.python_version()
-        uptime = str(self.bot.uptime)
-        start_time = str(self.bot.start_time)
-        latency = round(self.bot.latency*1000, 2)
+        # Get the info/data
+        data = self._get_data()      
 
+        # Embed description
+        desc = ''
+
+        # Add the data to the description
+        for k, v in data.items():
+            desc += f'\n--- {k} ---\n'
+            for k2, v2 in v.items():
+                desc += f'{k2}: {v2}\n'
+
+        # Create and send the embed to the interaction
         embed = discord.Embed(
-            title='Server Details',
-            description='```'
-            f'Python Ver: {py_ver}\n'
-            f'Discord.py Ver: {dpy_ver}\n'
-            '---\n'
-            f'OS: {platform.system()}\n'
-            f'OS Ver: {platform.version()}\n'
-            f'Latency {latency}ms\n'
-            '---\n'
-            f'Uptime: {uptime}\n'
-            f'Started: {start_time}\n'
-            f'Timezone: {time.tzname[1]}\n'
-            '```',
-            colour=discord.Colour.blurple()
+            title='Server Info',
+            colour=discord.Colour.orange(),
+            description=f'Here is some info on the bot & server:\n```{desc}```',
+            timestamp=inter.created_at
+        )
+        embed.set_footer(
+            text=f'Requested by {inter.user.name}',
+            icon_url=inter.user.display_avatar.url
         )
         await inter.response.send_message(embed=embed)
 
