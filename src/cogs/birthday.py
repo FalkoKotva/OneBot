@@ -4,9 +4,7 @@ import asyncio
 import logging
 import schedule
 import aiosqlite
-import discord
 from discord import app_commands, Interaction as Inter
-from discord.ext import commands
 from datetime import datetime
 
 from cog import BaseCog
@@ -22,7 +20,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     def __init__(self, bot):
         super().__init__(bot=bot)
         self.group.guild_ids = (bot.main_guild.id,)
-        schedule.every().day.at("21:25").do(lambda: asyncio.run(self.check_birthdays()))
+        # schedule.every().day.at("21:25").do(lambda: asyncio.run(self.check_birthdays()))
 
     async def check_birthdays(self):
         print('something')
