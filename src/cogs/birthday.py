@@ -97,6 +97,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Send the celebration announcement!
         await channel.send(embed=embed)
 
+    # All birthday commands are in this group
     group = app_commands.Group(
         name='birthday',
         description='Birthday commands'
@@ -106,20 +107,25 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
         """Returns list of members and their birthdays."""
-        
+
+        # Get all birthdays from the database with the user's id
         async with aiosqlite.connect(DATABASE) as db:
             data = await db.execute_fetchall(
                 "SELECT user_id, birthday FROM user_birthdays"
             )
-        
+
+        # Return if no birthdays are set
         if not data:
             inter.response.send_message(
                 'There are no birthdays in the database.',
                 ephemeral=True
             )
+            return
 
+        # Get list of members and their birthdays
         bday_list = [
-            f'{inter.guild.get_member(uid).mention}: {bday}' for uid, bday in data
+            f'{inter.guild.get_member(uid).mention}: {bday}'
+            for uid, bday in data
         ]
 
         await inter.response.send_message(
