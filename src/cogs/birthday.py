@@ -102,6 +102,31 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
+    @group.commands(name='list')
+    @app_commands.default_permissions(moderate_members=True)
+    async def list_birthdays(self, inter:Inter):
+        """Returns list of members and their birthdays."""
+        
+        async with aiosqlite.connect(DATABASE) as db:
+            data = await db.execute_fetchall(
+                "SELECT user_id, birthday FROM user_birthdays"
+            )
+        
+        if not data:
+            inter.response.send_message(
+                'There are no birthdays in the database.',
+                ephemeral=True
+            )
+
+        bday_list = [
+            f'{member.mention}: {bday}' for member, bday in data
+        ]
+
+        await inter.response.send_message(
+            '\n'.join(bday_list),
+            ephemeral=True
+        )
+
     @group.command(name='celebrate')
     @app_commands.default_permissions(moderate_members=True)
     async def force_celebrate_birthday(
