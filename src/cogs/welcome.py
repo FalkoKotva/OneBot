@@ -6,15 +6,14 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 
-from cog import Cog
+from cog import BaseCog
 
 
-class Welcome(Cog):
+class Welcome(BaseCog):
     """Cog for welcoming new members"""
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.group.guild_ids = (bot.main_guild.id,)
         self.welcome_channel_id = bot.config['guild']['channel_ids']['welcome']
 
     @commands.Cog.listener()
@@ -117,14 +116,20 @@ class Welcome(Cog):
                 \n{ahelp_channel.mention}'
         )
 
+        # Get the icon url footer if it exists
+        try:
+            icon_url = member.guild.icon.url
+        except AttributeError:
+            icon_url = None
+
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
-        embed.set_footer(text='DCG Server', icon_url=rules_channel.guild.icon.url)
+        embed.set_footer(text='DCG Server', icon_url=icon_url)
 
         return embed
 
     async def get_remove_embed(self, member:discord.Member):
-        """_summary_
+        """Returns a remove embed for the passed user.
 
         Args:
             member (discord.Member): _description_
@@ -133,12 +138,17 @@ class Welcome(Cog):
         # The embed base
         embed = discord.Embed(
             title='Goodbye, you won\'t be missed!',
-            description=f'{member.mention} has left the server.',
+            description=f'{member.mention} has left the server.'
+                '\nAllow me to reach for my tiny violin.',
             colour=discord.Colour.from_str('#00FEFE'),
             timestamp=datetime.now()
         )
 
-        icon_url = self.bot.main_guild.icon.url
+        # Get the icon url footer if it exists
+        try:
+            icon_url = member.guild.icon.url
+        except AttributeError:
+            icon_url = None
 
         # Thumbnail and footer for the embed
         embed.set_thumbnail(url=member.avatar.url)
@@ -149,6 +159,7 @@ class Welcome(Cog):
 
 async def setup(bot):
     """Setup the welcome cog"""
+
     await bot.add_cog(
         Welcome(bot),
         guilds=(bot.main_guild,)

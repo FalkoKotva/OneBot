@@ -1,8 +1,12 @@
 """Utils for the bot."""
 
 import os
+import logging
 import discord
-from discord import app_commands
+from discord import app_commands, Interaction as Inter
+
+
+log = logging.getLogger(__name__)
 
 
 async def get_member(interaction: discord.Interaction, member: str):
@@ -44,3 +48,10 @@ def to_choices(string_list:list[str]) -> list[app_commands.Choice[str]]:
         app_commands.Choice(name=i, value=i)
         for i in string_list
     ]
+
+def check_is_owner(inter:Inter) -> bool:
+    """Check if the user is the owner of the bot."""
+
+    result = inter.user.id == 377453890523627522
+    log.debug(f'Checking if user ({inter.user.id}) is owner {result}')
+    return result

@@ -1,6 +1,5 @@
 """Entry point for the bot. Run this file to get things started."""
 
-
 import os
 import time
 import json
@@ -12,7 +11,7 @@ from discord.ext import commands
 from datetime import timedelta
 from typing import Callable
 
-from cog import Cog
+from cog import BaseCog
 from logs import setup_logs
 from utils import list_cogs, to_choices
 from database import setup as db_setup
@@ -20,34 +19,42 @@ from constants import DATABASE, ACTIVITY_MSG
 
 
 class Bot(commands.Bot):
-    """
-    This class is the root of the bot, all cogs are loaded from here.
-    """
+    """This class is the root of the bot."""
 
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
 
+    config: dict
+    log_filepath: str
+
     def __init__(self, config:dict, log_filepath:str):
-        self._start_time = time.time()
+        """Initialize the bot.
+
+        Args:
+            config (dict): The config data.
+            log_filepath (str): Log filepath for the current session.
+        """
+
         self.config = config
         self.log_filepath = log_filepath
 
+        # Use this to roughly track the uptime
+        self._start_time = time.time()
+
         # Setup the bot's intents
         intents = discord.Intents.all()
-        super().__init__(command_prefix='!', intents=intents)
+        super().__init__(command_prefix='ob ', intents=intents)
 
         # Set the bot's activity status
         self.activity = discord.Game(name=ACTIVITY_MSG)
 
-        # Create the database file if it doesnt exist
+        # Create the database file if it doesnt exist, set it up
         if not os.path.exists(DATABASE):
             db_setup()
 
-        main_guild_id = config['guild']['id']
-
-        # Main discord server the bot is in
-        self.main_guild = discord.Object(id=main_guild_id)
-        self.tree.copy_global_to(guild=self.main_guild)
+        # Get the main discord server
+        self.main_guild_id = config['guild']['id']
+        self.main_guild = discord.Object(id=self.main_guild_id)
 
     @property
     def uptime(self) -> timedelta:
@@ -68,9 +75,11 @@ class Bot(commands.Bot):
 
         log.info('Syncing App Commands')
 
+        # Syncing requires a ready bot
         await self.wait_until_ready()
+
         if not self.commands_synced:
-            await self.tree.sync(guild=self.main_guild)
+            await self.tree.sync()
             self.commands_synced = True
             log.info('App Commands Synced')
 
@@ -80,9 +89,9 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
-        log.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        await self.load_cogs()
-        await self.sync_slash_commands()     
+        await self.sync_slash_commands()
+
+        log.info(f'Logged in as {self.user} (ID: {self.user.id})')   
 
         log_channel_id = self.config['guild']['channel_ids']['logs']
 
@@ -133,7 +142,7 @@ class Bot(commands.Bot):
             log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
 
 
-class CogManager(Cog, name='Cog Manager'):
+class CogManager(BaseCog, name='Cog Manager'):
     """
     Cog manager is incharge of loading, unloading and reloading cogs.
     It is loaded seperately from other cogs so that it can not be
@@ -272,29 +281,49 @@ class CogManager(Cog, name='Cog Manager'):
         """Responds with a list of all cogs."""
         
         output = '**List of cogs:**\n'
-        output += '\n'.join([fn[:-3] for fn in list_cogs()])
+        cogs = self.bot.cogs.values()
+        output += '\n'.join([cog.qualified_name for cog in cogs])
         await inter.response.send_message(output, ephemeral=True)
 
 async def main():
     
+    # Get the bot config
+    try:
+        with open('./data/test.config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        print('CRITICAL ERROR: config file is missing! Shutting down...')
+        return
+
     # Setup logging before anything else
-    log_filepath = setup_logs()
+    log_level = config['log_level']
+    log_filepath = setup_logs(log_level=log_level)
     
     # Get the root logger
     global log
     log = logging.getLogger('main')
 
     # Get the secret token
-    with open('TOKEN', 'r', encoding='utf-8') as f:
-        token = f.read()
+    try:
+        with open('TOKEN', 'r', encoding='utf-8') as f:
+            token = f.read()
+    except FileNotFoundError:
+        log.critical(
+            'TOKEN file not found in project root! Shutting down...'
+        )
+        return
 
-    # Get the bot config
-    with open('./data/test.config.json', 'r', encoding='utf-8') as f:
-        config = json.load(f)
-
-    # Startup the bot    
+    # Startup the bot
     async with Bot(config, log_filepath) as bot:
-        await bot.start(token)
+        await bot.load_cogs()
+        
+        try:
+            await bot.start(token, reconnect=True)
+        except discord.LoginFailure:
+            log.critical(
+                'You have passed an improper or invalid token! '
+                'Shutting down...'
+            )
 
 
 if __name__ == '__main__':

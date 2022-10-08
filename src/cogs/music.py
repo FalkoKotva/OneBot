@@ -22,7 +22,7 @@ import youtube_dl
 from async_timeout import timeout
 from discord.ext import commands
 
-from cog import Cog
+from cog import BaseCog
 
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -272,8 +272,9 @@ class VoiceState:
             self.voice = None
 
 
-class Music(Cog):
+class Music(BaseCog):
     def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
         self.bot = bot
         self.voice_states = {}
 

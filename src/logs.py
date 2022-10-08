@@ -69,7 +69,7 @@ def update_log_levels(logger_names:tuple[str], level:int):
         logger=logging.getLogger(name)
         logger.setLevel(level)
 
-def setup_logs() -> str:
+def setup_logs(log_level:int) -> str:
     """
     Setup a logging queue handler and queue listener.
     Also creates a new log file for the current session and deletes old
@@ -82,7 +82,7 @@ def setup_logs() -> str:
 
     # Configure the root logger to use the queue
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=log_level,
         handlers=(queue_handler,),
         format='[%(asctime)s] %(levelname)s %(name)s: %(message)s'
     )

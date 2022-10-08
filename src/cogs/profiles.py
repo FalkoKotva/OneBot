@@ -5,19 +5,17 @@ Cog for handling tickets.
 import discord
 from discord import app_commands
 
-from cog import Cog
+from cog import BaseCog
 from ui import ProfileImage
 
 
-class Profiles(Cog):
+class Profiles(BaseCog):
     """
     Cog for custom profiles.
     """
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.profile_group.guild_ids = (bot.main_guild.id,)
-        self.get_app_commands()[0].guilds = (bot.main_guild.id,)
 
     # Test command group.
     profile_group = app_commands.Group(

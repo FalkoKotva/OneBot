@@ -6,18 +6,16 @@ Cog for testing.
 import discord
 from discord import app_commands
 
-from cog import Cog
-from ui import ReportModal
+from cog import BaseCog
 
 
-class Testing(Cog):
+class Testing(BaseCog):
     """
     Cog for testing.
     """
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.group.guild_ids = (bot.main_guild.id,)
 
     # Test command group.
     group = app_commands.Group(
