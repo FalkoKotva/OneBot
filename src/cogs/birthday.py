@@ -1,6 +1,7 @@
 """Cog for info commands."""
 
 import asyncio
+from dataclasses import dataclass
 import logging
 import schedule
 import aiosqlite
@@ -87,6 +88,25 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             'If I knew it, I\'ve forgotten your birthday!',
             ephemeral=True
         )
+    
+    @group.command(name='see')
+    async def get_birthday(self, inter:Inter):
+        """See your birthday if it is saved."""
+        
+        async with aiosqlite.connect(DATABASE) as db:
+            data = await db.execute_fetchall(
+                """SELECT birthday FROM user_birthdays WHERE user_id = ?""",
+                (inter.user.id,)
+            )
+        
+        if not data:
+            await inter.response.send_message(
+                'I don\'t know your birthday, sorry!'
+                '\nYou can save it with `/birthday save DD/MM/YYYY`',
+            )
+            return
+        
+        await inter.response.send_message(f'Your birthday is on {data[0][0]}!')
 
 
 async def setup(bot):
