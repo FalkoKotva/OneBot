@@ -102,7 +102,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
-    @group.commands(name='list')
+    @group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
         """Returns list of members and their birthdays."""
@@ -119,7 +119,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
 
         bday_list = [
-            f'{member.mention}: {bday}' for member, bday in data
+            f'{inter.guild.get_member(uid).mention}: {bday}' for uid, bday in data
         ]
 
         await inter.response.send_message(
