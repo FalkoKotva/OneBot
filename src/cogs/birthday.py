@@ -7,9 +7,11 @@ from discord import app_commands, Interaction as Inter
 from discord.ext import tasks
 from datetime import datetime, time
 from num2words import num2words
+from functools import cache
 
 from cog import BaseCog
 from constants import DATABASE
+from utils import normalized_name
 
 
 log = logging.getLogger(__name__)
@@ -51,6 +53,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
             # If today is not the user's birthday, skip them
             if not (bday.month == now.month and bday.day == now.day):
+                await self.wrap_up_birthday(user_id)
                 continue
 
             # Calculate the user's age
@@ -59,6 +62,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             # It's there birthday, celebrate!
             await self.celebrate_birthday(user_id, age)
 
+    @cache
     async def celebrate_birthday(self, user_id, age):
         """Celebrate a user's birthday.
 
@@ -71,6 +75,10 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         channel_id = self.bot.config['guild']['channel_ids']['alerts']
         channel = self.bot.get_channel(channel_id)
 
+        # Get the birthday role
+        role_id = self.bot.config['guild']['role_ids']['birthday']
+        role = channel.guild.get_role(role_id)
+
         # Get the user
         member = channel.guild.get_member(user_id)
 
@@ -82,6 +90,9 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                 'skipping their birthday'
             )
             return
+
+        # Assign the birthday role to the member
+        await member.add_roles(role)
 
         # Ordinalise the age
         ordinal_age = num2words(age, to='ordinal_num')
@@ -107,6 +118,39 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Send the celebration announcement!
         await channel.send(embed=embed)
+
+    async def wrap_up_birthday(self, user_id:int):
+        """Stop celebrating a user birthday
+
+        Args:
+            user_id (int): The user's ID.
+        """
+
+        log.debug('Attempting to wrap up birthday')
+
+        # Get the guild
+        guild_id = self.bot.main_guild_id
+        guild = self.bot.get_guild(guild_id)
+
+        # Get the birthday role
+        role_id = self.bot.config['guild']['role_ids']['birthday']
+        role = guild.get_role(role_id)
+
+        # Get the user
+        member = guild.get_member(user_id)
+        name = normalized_name(member)
+
+        # Remove the role from the member
+        if role in member.roles:
+            log.info(f'Removing birthday role from {name}')
+            await member.remove_roles(role)
+            return
+
+        log.debug(
+            'Birthday role not found, '
+            f'skipping {name}'
+        )
+
 
     # All birthday commands are in this group
     group = app_commands.Group(
@@ -164,6 +208,24 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Respond to the interaction to avoid an error
         await inter.response.send_message(
             'Birthday celebrated!',
+            ephemeral=True
+        )
+
+    @group.command(name='wrapup')
+    @app_commands.default_permissions(moderate_members=True)
+    async def force_wrap_up_birthday(
+        self,
+        inter:Inter,
+        member:discord.Member
+    ):
+        """Stop celebrating a birthday."""
+
+        # Just call the normal wrap up function
+        await self.wrap_up_birthday(member.id)
+
+        # Respond to the interaction to avoid an error
+        await inter.response.send_message(
+            'Birthday wrapped up!',
             ephemeral=True
         )
 
