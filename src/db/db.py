@@ -39,7 +39,7 @@ def commit():
     conn.commit()
 
 def autosave(sched):
-    """"""
+    """Schedule a job to autosave the database every minute"""
 
     sched.add_job(commit, CronTrigger(second=0))
 
