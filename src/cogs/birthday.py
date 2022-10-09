@@ -158,7 +158,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
-    @group.command(name='list')
+    # Admin birthday commands are in this group
+    admin_group = app_commands.Group(
+        parent=group,
+        name='admin',
+        description='Admin birthday commands'
+    )
+
+    @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
         """Returns list of members and their birthdays."""
@@ -189,7 +196,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             ephemeral=True
         )
 
-    @group.command(name='celebrate')
+    @admin_group.command(name='celebrate')
     @app_commands.default_permissions(moderate_members=True)
     async def force_celebrate_birthday(
         self,
@@ -211,7 +218,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             ephemeral=True
         )
 
-    @group.command(name='wrapup')
+    @admin_group.command(name='wrapup')
     @app_commands.default_permissions(moderate_members=True)
     async def force_wrap_up_birthday(
         self,
@@ -229,7 +236,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             ephemeral=True
         )
 
-    @group.command(name='check')
+    @admin_group.command(name='check')
     @app_commands.default_permissions(moderate_members=True)
     async def force_check_birthdays(self, inter:Inter):
         """Force check for birthdays, skipping the daily auto check."""
