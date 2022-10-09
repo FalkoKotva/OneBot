@@ -1,17 +1,18 @@
 """Cog for the automated birthday celebration system."""
 
 import logging
-import aiosqlite
 import discord
 from discord import app_commands, Interaction as Inter
 from discord.ext import tasks
 from datetime import datetime, time
 from num2words import num2words
 from functools import cache
+from sqlite3 import IntegrityError
 
 from cog import BaseCog
 from constants import DATABASE
 from utils import normalized_name
+from db import db
 
 
 log = logging.getLogger(__name__)
@@ -34,10 +35,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         log.debug('Doing daily birthday check')
 
         # Get all of the birthdays including the user id
-        async with aiosqlite.connect(DATABASE) as db:
-            data = await db.execute_fetchall(
-                """SELECT user_id, birthday FROM user_birthdays"""
-            )
+        data = db.records("SELECT * FROM user_birthdays")
 
         # If there are no birthdays, we can stop here
         if not data:
@@ -172,10 +170,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """Returns list of members and their birthdays."""
 
         # Get all birthdays from the database with the user's id
-        async with aiosqlite.connect(DATABASE) as db:
-            data = await db.execute_fetchall(
-                "SELECT user_id, birthday FROM user_birthdays"
-            )
+        data = db.records("SELECT * FROM user_birthdays")
 
         # Return if no birthdays are set
         if not data:
@@ -283,25 +278,18 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             return
 
         # Save the birthday to the database
-        async with aiosqlite.connect(DATABASE) as db:
-            try:
-                await db.execute(
-                    """INSERT INTO user_birthdays (user_id, birthday)
-                    VALUES (?, ?)""",
-                    (inter.user.id, birthday)
-                )
-
-                # Commit the changes
-                await db.commit()
-   
-            # Raised if the user already has a birthday saved
-            # (user id unique constraint failed)
-            except aiosqlite.IntegrityError:
-                await inter.response.send_message(
+        try:
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                inter.user.id, birthday
+            )
+            db.commit()
+        except IntegrityError:
+            await inter.response.send_message(
                     'You already have a birthday set',
                     ephemeral=True
                 )
-                return
+            return
 
         log.info(
             f'Birthday saved for {inter.user.display_name} '
@@ -309,7 +297,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
         await inter.response.send_message(
-            'I\'ve saved your special date, ' /
+            'I\'ve saved your special date, '
             'I can\'t wait to wish you a happy birthday!',
             ephemeral=True
         )
@@ -319,14 +307,11 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """Remove your birthday from the database."""
 
         # Delete the birthday from the database
-        async with aiosqlite.connect(DATABASE) as db:
-            await db.execute(
-                """DELETE FROM user_birthdays WHERE user_id = ?""",
-                (inter.user.id,)
-            )
-
-            # Commit the changes
-            await db.commit()
+        db.execute(
+            "DELETE FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
+        db.commit()
 
         log.info(f'Birthday removed for {inter.user.display_name}')
 
@@ -341,11 +326,10 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """See your birthday if it is saved."""
 
         # Get the birthday from the database that matches the member id
-        async with aiosqlite.connect(DATABASE) as db:
-            data = await db.execute_fetchall(
-                "SELECT birthday FROM user_birthdays WHERE user_id = ?",
-                (inter.user.id,)
-            )
+        data = db.record(
+            "SELECT birthday FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
 
         # If the user doesn't have a birthday saved
         if not data:
@@ -357,7 +341,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Inform the user of their saved birthday
         await inter.response.send_message(
-            f'Your birthday is on {data[0][0]}!'
+            f'Your birthday is on {data[0]}!'
         )
 
 
