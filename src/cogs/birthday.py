@@ -10,7 +10,6 @@ from functools import cache
 from sqlite3 import IntegrityError
 
 from cog import BaseCog
-from constants import DATABASE
 from utils import normalized_name
 from db import db
 
