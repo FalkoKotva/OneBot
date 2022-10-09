@@ -8,6 +8,7 @@ import logging
 import discord
 from discord import app_commands, Interaction as Inter
 from discord.ext import commands
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import timedelta
 from typing import Callable
 
@@ -16,6 +17,7 @@ from logs import setup_logs
 from utils import list_cogs, to_choices
 from database import setup as db_setup
 from constants import DATABASE, ACTIVITY_MSG
+from db import db
 
 
 class Bot(commands.Bot):
@@ -37,6 +39,10 @@ class Bot(commands.Bot):
 
         self.config = config
         self.log_filepath = log_filepath
+
+        # Scehdule the database autosaving
+        self.scheduler = AsyncIOScheduler()
+        db.autosave(self.scheduler)
 
         # Use this to roughly track the uptime
         self._start_time = time.time()
@@ -89,13 +95,16 @@ class Bot(commands.Bot):
         Syncs slash commands and prints a ready message.
         """
 
+        # Sync app commands
         await self.sync_slash_commands()
 
-        log.info(f'Logged in as {self.user} (ID: {self.user.id})')   
+        # Start the scheduler
+        self.scheduler.start()
 
-        log_channel_id = self.config['guild']['channel_ids']['logs']
+        log.info(f'Logged in as {self.user} (ID: {self.user.id})')
 
         # Send a message into the discord log channel
+        log_channel_id = self.config['guild']['channel_ids']['logs']
         log_channel = self.get_channel(log_channel_id)
         await log_channel.send('**I\'m back online!**')
     
