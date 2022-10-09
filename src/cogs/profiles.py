@@ -5,7 +5,7 @@ Cog for handling tickets.
 import discord
 from discord import app_commands
 
-from cog import BaseCog
+from . import BaseCog
 from ui import ProfileImage
 
 

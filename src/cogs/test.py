@@ -6,7 +6,7 @@ Cog for testing.
 import discord
 from discord import app_commands
 
-from cog import BaseCog
+from . import BaseCog
 
 
 class Testing(BaseCog):

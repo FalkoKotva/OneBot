@@ -99,7 +99,7 @@ def setup_logs(log_level:int) -> str:
     
     # Mute loud loggers
     update_log_levels(
-        ('discord', 'PIL', 'urllib3', 'aiosqlite'),
+        ('discord', 'PIL', 'urllib3', 'aiosqlite', 'apscheduler'),
         logging.WARNING
     )
 
