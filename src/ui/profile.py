@@ -1,35 +1,15 @@
-"""
-discord UI kit objects.
-"""
+"""ui for the profile window."""
 
 import json
 import logging
-import textwrap
-import requests
 import discord
-import discord.ui as ui
-from discord import Interaction
-from typing import Coroutine
-from PIL import Image, ImageDraw, ImageFont
+import requests
+import textwrap
 from io import BytesIO
-
-from constants import AVATAR_SIZE, BANNER_SIZE
+from PIL import Image, ImageDraw, ImageFont
 
 
 log = logging.getLogger(__name__)
-
-
-class LevelObject:
-    exp: int
-    exp_next: int
-    level: int
-    rank: int
-    
-    def __init__(self, member:discord.Member):
-        self.exp = 0
-        self.exp_next = 0
-        self.level = 0
-        self.rank = 0
 
 
 class ProfileImage:
@@ -152,53 +132,3 @@ class ProfileImage:
         self.image = final_image
         final_image.save(self.bytes, format='png')
         self.bytes.seek(0)
-
-
-class ReportModal(ui.Modal, title='Report Ticket'):
-    """
-    Modal for users to report other users.
-    """
-
-    accused = ui.TextInput(
-        label='Who would you like to report?',
-        placeholder='exampleuser#1234'
-    )
-    reason = ui.TextInput(
-        label='What is the reason for your report?',
-        style=discord.TextStyle.long
-    )
-    
-    def __init__(self, func: Coroutine):
-        super().__init__()
-        self.func = lambda *args: func(*args)
-
-    async def on_submit(self, interaction: Interaction):
-    
-        #
-        await self.func(interaction, self.accused.value, self.reason.value)
-    
-        # Send a message to confirm the report
-        await interaction.response.send_message(
-            'Thanks for your report {0.user.mention}!'.format(interaction) +
-            '\nWe will look into it as soon as possible.',
-            ephemeral=True
-        )
-
-
-class SuggestionModal(ui.Modal, title='Suggestion Ticket'):
-    """
-    Modal for users to submit suggestions for the server.
-    """
-    
-    suggestion = ui.TextInput(
-        label='What suggestion would you like to share?',
-        style=discord.TextStyle.long
-    )
-    
-    def __init__(self, func: Coroutine):
-        super().__init__()
-        self.func = lambda *args: func(*args)
-    
-    async def on_submit(self, interaction: Interaction):
-        await self.func(interaction, self.suggestion.value)
-
