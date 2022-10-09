@@ -1,4 +1,4 @@
-"""Cog for info commands."""
+"""Cog for the automated birthday celebration system."""
 
 import logging
 import aiosqlite
@@ -20,19 +20,23 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
     def __init__(self, bot):
         super().__init__(bot=bot)
-        self.group.guild_ids = (bot.main_guild.id,)
+
+        # Start the task to check for birthdays
         self.check_birthdays.start()
 
     @tasks.loop(time=time(hour=7))
     async def check_birthdays(self):
         """Check if it's anyone's birthday, if so send a message."""
 
-        log.debug('Checking birthdays')
+        log.debug('Doing daily birthday check')
+
+        # Get all of the birthdays including the user id
         async with aiosqlite.connect(DATABASE) as db:
             data = await db.execute_fetchall(
                 """SELECT user_id, birthday FROM user_birthdays"""
             )
-        
+
+        # If there are no birthdays, we can stop here
         if not data:
             log.debug('I don\'t know anyone\'s birthday')
 
@@ -49,6 +53,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             if not (bday.month == now.month and bday.day == now.day):
                 continue
 
+            # Calculate the user's age
             age = now.year - bday.year
 
             # It's there birthday, celebrate!
@@ -58,13 +63,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """Celebrate a user's birthday.
 
         Args:
-            user_id (int): The user's ID
+            user_id (int): The user's ID.
+            age (int): The user's age.
         """
 
         # Get the channel to celebrate in
         channel_id = self.bot.config['guild']['channel_ids']['alerts']
         channel = self.bot.get_channel(channel_id)
 
+        # Get the user
         member = channel.guild.get_member(user_id)
 
         # If the member is not in the guild, we can't celebrate
@@ -76,15 +83,19 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
+        # Ordinalise the age
         ordinal_age = num2words(age, to='ordinal_num')
+
+        # Number of members in the guild
         user_count = len(channel.guild.members) - 1  # -1 for the user
 
+        # This is the celebration message
         desc = f'Happy {ordinal_age} birthday {member.mention}!' \
             '\nCongratulations on another year of life! ' \
             f'All **{user_count}** of us here on the server' \
             ' are wishing you a great day!'
 
-        # Create the embed
+        # This embed contains the celebration message
         embed = discord.Embed(
             title='Happy Birthday!',
             description=desc,
@@ -128,6 +139,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             for uid, bday in data
         ]
 
+        # Put the list into a string and send it
         await inter.response.send_message(
             '\n'.join(bday_list),
             ephemeral=True
@@ -146,7 +158,10 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         their birthday or not.
         """
 
+        # Just call the normal celebrate function
         await self.celebrate_birthday(member.id, age)
+
+        # Respond to the interaction to avoid an error
         await inter.response.send_message(
             'Birthday celebrated!',
             ephemeral=True
@@ -157,8 +172,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     async def force_check_birthdays(self, inter:Inter):
         """Force check for birthdays, skipping the daily auto check."""
 
+        # Just call the normal check task function
         await self.check_birthdays()
-        await inter.response.send_message('Checked birthdays', ephemeral=True)
+
+        # Respond to the interaction to avoid an error
+        await inter.response.send_message(
+            'Checked birthdays!',
+            ephemeral=True
+        )
 
     @group.command(name='save')
     async def add_birthday(self, inter:Inter, birthday:str):
@@ -168,6 +189,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """
 
         # Convert the string to a datetime object
+        # ValueError will be raised if it's not a valid format
         try:
             bday = datetime.strptime(birthday, '%d/%m/%Y')
         except ValueError:
@@ -177,11 +199,12 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
+        # Get the validation range for the entered birthday date
         now = datetime.now()
         valid_range = range(now.year-40, now.year-12)
         str_range = f'{valid_range.start} & {valid_range.stop-1}'
 
-        # Check that the date range is valid
+        # Check that the birthday date range is valid
         if bday.year not in valid_range:
             await inter.response.send_message(
                 f'Invalid year, please use a year between {str_range}',
@@ -189,13 +212,20 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
+        # Save the birthday to the database
         async with aiosqlite.connect(DATABASE) as db:
             try:
                 await db.execute(
-                    """INSERT INTO user_birthdays (user_id, birthday) VALUES (?, ?)""",
+                    """INSERT INTO user_birthdays (user_id, birthday)
+                    VALUES (?, ?)""",
                     (inter.user.id, birthday)
                 )
+
+                # Commit the changes
                 await db.commit()
+   
+            # Raised if the user already has a birthday saved
+            # (user id unique constraint failed)
             except aiosqlite.IntegrityError:
                 await inter.response.send_message(
                     'You already have a birthday set',
@@ -203,10 +233,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                 )
                 return
 
-        log.info(f'Birthday saved for {inter.user.display_name} at {birthday}')
+        log.info(
+            f'Birthday saved for {inter.user.display_name} '
+            f'at {birthday}'
+        )
 
         await inter.response.send_message(
-            'I\'ve saved your special date, I can\'t wait to wish you a happy birthday!',
+            'I\'ve saved your special date, ' /
+            'I can\'t wait to wish you a happy birthday!',
             ephemeral=True
         )
 
@@ -214,15 +248,19 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     async def remove_birthday(self, inter:Inter):
         """Remove your birthday from the database."""
 
+        # Delete the birthday from the database
         async with aiosqlite.connect(DATABASE) as db:
             await db.execute(
                 """DELETE FROM user_birthdays WHERE user_id = ?""",
                 (inter.user.id,)
             )
+
+            # Commit the changes
             await db.commit()
 
         log.info(f'Birthday removed for {inter.user.display_name}')
 
+        # Let the user know their birthday has been removed
         await inter.response.send_message(
             'If I knew it, I\'ve forgotten your birthday!',
             ephemeral=True
@@ -231,13 +269,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     @group.command(name='see')
     async def get_birthday(self, inter:Inter):
         """See your birthday if it is saved."""
-        
+
+        # Get the birthday from the database that matches the member id
         async with aiosqlite.connect(DATABASE) as db:
             data = await db.execute_fetchall(
-                """SELECT birthday FROM user_birthdays WHERE user_id = ?""",
+                "SELECT birthday FROM user_birthdays WHERE user_id = ?",
                 (inter.user.id,)
             )
 
+        # If the user doesn't have a birthday saved
         if not data:
             await inter.response.send_message(
                 'I don\'t know your birthday, sorry!'
@@ -245,8 +285,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
-        await inter.response.send_message(f'Your birthday is on {data[0][0]}!')
+        # Inform the user of their saved birthday
+        await inter.response.send_message(
+            f'Your birthday is on {data[0][0]}!'
+        )
 
 
 async def setup(bot):
-    await bot.add_cog(BirthdayCog(bot=bot))
+    """Extension setup function"""
+
+    cog = BirthdayCog(bot)
+    await bot.add_cog(cog)
