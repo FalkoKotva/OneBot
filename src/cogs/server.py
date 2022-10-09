@@ -6,7 +6,7 @@ import platform
 import discord
 from discord import app_commands, Interaction as Inter
 
-from cog import BaseCog
+from . import BaseCog
 from utils import check_is_owner
 
 

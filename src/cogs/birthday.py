@@ -9,7 +9,7 @@ from num2words import num2words
 from functools import cache
 from sqlite3 import IntegrityError
 
-from cog import BaseCog
+from . import BaseCog
 from utils import normalized_name
 from db import db
 

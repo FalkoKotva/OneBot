@@ -3,7 +3,7 @@
 import logging
 from discord import app_commands, Interaction as Inter
 
-from cog import BaseCog
+from . import BaseCog
 
 
 log = logging.getLogger(__name__)

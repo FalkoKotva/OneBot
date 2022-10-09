@@ -10,7 +10,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import timedelta
 from typing import Callable
 
-from cog import BaseCog
+from cogs import BaseCog
 from utils import list_cogs, to_choices
 from constants import ACTIVITY_MSG
 from db import db
@@ -137,13 +137,20 @@ class Bot(commands.Bot):
         await self.add_cog(cog_manager)
 
         log.info('Loading cog files')
+
         for filename in os.listdir('./src/cogs'):
-            if filename.endswith('.py'):
-                await self.load_extension(f'cogs.{filename[:-3]}')
-                log.debug(f'Loading cog file: {filename}')
+
+            # Skip non cog files
+            if not filename.endswith('.py') or filename.startswith('_'):
+                log.debug(
+                    f'Skipping non cog file {filename} in cogs directory'
+                )
                 continue
 
-            log.warning(f'Found a non .py file in the cogs directory: {filename}, skipping...')
+            # Load the cog
+            await self.load_extension(f'cogs.{filename[:-3]}')
+            log.debug(f'Loading cog file: {filename}')
+            
 
 
 class CogManager(BaseCog, name='Cog Manager'):
