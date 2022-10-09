@@ -28,7 +28,8 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
     @tasks.loop(time=time(hour=7))
     async def check_birthdays(self):
-        """Check if it's anyone's birthday, if so send a message."""
+        """Check if it's anyone's birthday, if so send a message.
+        Also, check if anyone's birthday is over and remove the role."""
 
         log.debug('Doing daily birthday check')
 
