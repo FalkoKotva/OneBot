@@ -15,7 +15,6 @@ from typing import Callable
 from cog import BaseCog
 from logs import setup_logs
 from utils import list_cogs, to_choices
-from database import setup as db_setup
 from constants import DATABASE, ACTIVITY_MSG
 from db import db
 
@@ -53,10 +52,6 @@ class Bot(commands.Bot):
 
         # Set the bot's activity status
         self.activity = discord.Game(name=ACTIVITY_MSG)
-
-        # Create the database file if it doesnt exist, set it up
-        if not os.path.exists(DATABASE):
-            db_setup()
 
         # Get the main discord server
         self.main_guild_id = config['guild']['id']
