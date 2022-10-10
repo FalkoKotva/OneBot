@@ -11,6 +11,7 @@ from sqlite3 import IntegrityError
 
 from . import BaseCog
 from utils import normalized_name
+from ui import BirthdayModal
 from db import db
 
 
@@ -246,60 +247,33 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
     @group.command(name='save')
-    async def add_birthday(self, inter:Inter, birthday:str):
+    async def add_birthday(self, inter:Inter):
         """
         Save your birthday and recieve a happy birthday message
         on your birthday.
         """
 
-        # Convert the string to a datetime object
-        # ValueError will be raised if it's not a valid format
-        try:
-            bday = datetime.strptime(birthday, '%d/%m/%Y')
-        except ValueError:
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = not not db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            inter.user.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
             await inter.response.send_message(
-                'Invalid date format, please use DD/MM/YYYY',
+                "You already have a birthday set!",
                 ephemeral=True
             )
             return
 
-        # Get the validation range for the entered birthday date
-        now = datetime.now()
-        valid_range = range(now.year-40, now.year-12)
-        str_range = f'{valid_range.start} & {valid_range.stop-1}'
-
-        # Check that the birthday date range is valid
-        if bday.year not in valid_range:
-            await inter.response.send_message(
-                f'Invalid year, please use a year between {str_range}',
-                ephemeral=True
-            )
-            return
-
-        # Save the birthday to the database
-        try:
-            db.execute(
-                "INSERT INTO user_birthdays VALUES (?, ?)",
-                inter.user.id, birthday
-            )
-            db.commit()
-        except IntegrityError:
-            await inter.response.send_message(
-                    'You already have a birthday set',
-                    ephemeral=True
-                )
-            return
-
-        log.info(
-            f'Birthday saved for {inter.user.display_name} '
-            f'at {birthday}'
+        save_bday = lambda birthday: db.execute(
+            "INSERT INTO user_birthdays VALUES (?, ?)",
+            inter.user.id, birthday
         )
 
-        await inter.response.send_message(
-            'I\'ve saved your special date, '
-            'I can\'t wait to wish you a happy birthday!',
-            ephemeral=True
-        )
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
 
     @group.command(name='forget')
     async def remove_birthday(self, inter:Inter):
