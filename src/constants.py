@@ -1,8 +1,13 @@
 """This file contains all the constants used in the bot."""
 
-#
+# Bot constants
 ACTIVITY_MSG = 'I am up and running!'
 DATE_FORMAT = '%d/%m/%Y'
+
+# MSGS
+BAD_TOKEN = 'You have passed an improper or invalid token! Shutting down...'
+NO_TOKEN = 'TOKEN file not found in project root! Shutting down...'
+NO_CONFIG = 'CRITICAL ERROR: config file is missing! Shutting down...'
 
 # Logging constants
 LOGS = 'logs/'

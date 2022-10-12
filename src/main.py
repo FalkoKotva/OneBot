@@ -5,8 +5,9 @@ import logging
 import discord
 import asyncio
 
-from logs import setup_logs
 from bot import Bot
+from logs import setup_logs
+from constants import BAD_TOKEN, NO_TOKEN, NO_CONFIG
 
 
 log = logging.getLogger('main')
@@ -18,7 +19,7 @@ async def main():
         with open('./data/test.config.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
     except FileNotFoundError:
-        print('CRITICAL ERROR: config file is missing! Shutting down...')
+        print(NO_CONFIG)
         return
 
     # Setup logging before anything else
@@ -30,9 +31,7 @@ async def main():
         with open('TOKEN', 'r', encoding='utf-8') as f:
             token = f.read()
     except FileNotFoundError:
-        log.critical(
-            'TOKEN file not found in project root! Shutting down...'
-        )
+        log.critical(NO_TOKEN)
         return
 
     # Initialize the bot
@@ -45,10 +44,7 @@ async def main():
         try:
             await bot.start(token, reconnect=True)
         except discord.LoginFailure:
-            log.critical(
-                'You have passed an improper or invalid token! '
-                'Shutting down...'
-            )
+            log.critical(BAD_TOKEN)
 
 if __name__ == '__main__':
     asyncio.run(main())
