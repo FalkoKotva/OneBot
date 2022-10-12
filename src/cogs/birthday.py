@@ -172,29 +172,29 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Get all birthdays from the database
         birthdays = db.records("SELECT * FROM user_birthdays")
 
+        # If there are no birthdays, we can't do anything
         if not birthdays:
             await inter.response.send_message(
                 "There are no birthdays in my database.",
                 ephemeral=True
             )
             return
-        
-        now = datetime.now()
 
+        # Convert the birthdays to datetime objects
         birthdays = [
             (member_id, datetime.strptime(bday, DATE_FORMAT))
             for member_id, bday in birthdays
         ]
+
+        # Sort the birthdays by the day and month
         birthdays.sort(key=lambda i:i[1].day and i[1].month)
 
-        try:
-            embed = NextBirthdayEmbed(inter, birthdays)
-        except NoNextBirthday as e:
-            await inter.response.send_message(e)
-            return
+        # Get the embed for displaying the next birthday
+        embed = NextBirthdayEmbed(inter, birthdays)
 
-        await inter.response.send_message(embed=embed)
-        
+        # Send the embed to the user, ending the interaction
+        await inter.response.send_message(embed=embed, ephemeral=True)
+
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
