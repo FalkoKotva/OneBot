@@ -7,11 +7,12 @@ from discord.ext import tasks
 from datetime import datetime, time
 from num2words import num2words
 from functools import cache
-from sqlite3 import IntegrityError
 
 from . import BaseCog
 from utils import normalized_name
-from ui import BirthdayModal
+from constants import DATE_FORMAT
+from exceptions import NoNextBirthday
+from ui import BirthdayModal, NextBirthdayEmbed
 from db import db
 
 
@@ -164,6 +165,36 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Admin birthday commands'
     )
 
+    @group.command(name='next')
+    async def see_next_birthday(self, inter:Inter):
+        """See who's birthday is next."""
+
+        # Get all birthdays from the database
+        birthdays = db.records("SELECT * FROM user_birthdays")
+
+        if not birthdays:
+            await inter.response.send_message(
+                "There are no birthdays in my database.",
+                ephemeral=True
+            )
+            return
+        
+        now = datetime.now()
+
+        birthdays = [
+            (member_id, datetime.strptime(bday, DATE_FORMAT))
+            for member_id, bday in birthdays
+        ]
+        birthdays.sort(key=lambda i:i[1].day and i[1].month)
+
+        try:
+            embed = NextBirthdayEmbed(inter, birthdays)
+        except NoNextBirthday as e:
+            await inter.response.send_message(e)
+            return
+
+        await inter.response.send_message(embed=embed)
+        
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):

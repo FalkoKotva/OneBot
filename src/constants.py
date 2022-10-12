@@ -2,6 +2,7 @@
 
 #
 ACTIVITY_MSG = 'I am up and running!'
+DATE_FORMAT = '%d/%m/%Y'
 
 # Logging constants
 LOGS = 'logs/'
