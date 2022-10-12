@@ -7,10 +7,12 @@ from discord.ext import tasks
 from datetime import datetime, time
 from num2words import num2words
 from functools import cache
-from sqlite3 import IntegrityError
 
 from . import BaseCog
 from utils import normalized_name
+from constants import DATE_FORMAT
+from exceptions import NoNextBirthday
+from ui import BirthdayModal, NextBirthdayEmbed
 from db import db
 
 
@@ -163,6 +165,36 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Admin birthday commands'
     )
 
+    @group.command(name='next')
+    async def see_next_birthday(self, inter:Inter):
+        """See who's birthday is next."""
+
+        # Get all birthdays from the database
+        birthdays = db.records("SELECT * FROM user_birthdays")
+
+        # If there are no birthdays, we can't do anything
+        if not birthdays:
+            await inter.response.send_message(
+                "There are no birthdays in my database.",
+                ephemeral=True
+            )
+            return
+
+        # Convert the birthdays to datetime objects
+        birthdays = [
+            (member_id, datetime.strptime(bday, DATE_FORMAT))
+            for member_id, bday in birthdays
+        ]
+
+        # Sort the birthdays by the day and month
+        birthdays.sort(key=lambda i:i[1].day and i[1].month)
+
+        # Get the embed for displaying the next birthday
+        embed = NextBirthdayEmbed(inter, birthdays)
+
+        # Send the embed to the user, ending the interaction
+        await inter.response.send_message(embed=embed, ephemeral=True)
+
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
@@ -246,60 +278,33 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
     @group.command(name='save')
-    async def add_birthday(self, inter:Inter, birthday:str):
+    async def add_birthday(self, inter:Inter):
         """
         Save your birthday and recieve a happy birthday message
         on your birthday.
         """
 
-        # Convert the string to a datetime object
-        # ValueError will be raised if it's not a valid format
-        try:
-            bday = datetime.strptime(birthday, '%d/%m/%Y')
-        except ValueError:
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = not not db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            inter.user.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
             await inter.response.send_message(
-                'Invalid date format, please use DD/MM/YYYY',
+                "You already have a birthday set!",
                 ephemeral=True
             )
             return
 
-        # Get the validation range for the entered birthday date
-        now = datetime.now()
-        valid_range = range(now.year-40, now.year-12)
-        str_range = f'{valid_range.start} & {valid_range.stop-1}'
-
-        # Check that the birthday date range is valid
-        if bday.year not in valid_range:
-            await inter.response.send_message(
-                f'Invalid year, please use a year between {str_range}',
-                ephemeral=True
-            )
-            return
-
-        # Save the birthday to the database
-        try:
-            db.execute(
-                "INSERT INTO user_birthdays VALUES (?, ?)",
-                inter.user.id, birthday
-            )
-            db.commit()
-        except IntegrityError:
-            await inter.response.send_message(
-                    'You already have a birthday set',
-                    ephemeral=True
-                )
-            return
-
-        log.info(
-            f'Birthday saved for {inter.user.display_name} '
-            f'at {birthday}'
+        save_bday = lambda birthday: db.execute(
+            "INSERT INTO user_birthdays VALUES (?, ?)",
+            inter.user.id, birthday
         )
 
-        await inter.response.send_message(
-            'I\'ve saved your special date, '
-            'I can\'t wait to wish you a happy birthday!',
-            ephemeral=True
-        )
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
 
     @group.command(name='forget')
     async def remove_birthday(self, inter:Inter):
