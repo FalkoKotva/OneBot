@@ -38,7 +38,7 @@ class NextBirthdayEmbed(discord.Embed):
         days_until = (birthday - now).days
         
         log.debug(
-            f'Birthday found: {normalized_name(member_id)} \
+            f'Birthday found: {normalized_name(member)} \
                 {birthday=} {days_until=}'
         )
 
