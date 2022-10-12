@@ -10,7 +10,7 @@ import discord
 
 from utils import normalized_name
 from constants import DATE_FORMAT
-from ui import BirthdayModal, NextBirthdayEmbed
+from ui import BirthdayModal, NextBirthdayEmbed, BirthdayHelpEmbed
 from db import db
 from . import BaseCog
 
@@ -153,12 +153,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
-    # Admin birthday commands are in this group
-    admin_group = app_commands.Group(
-        parent=group,
-        name='admin',
-        description='Admin birthday commands'
-    )
+    @group.command(name='help')
+    async def list_bday_commands(self, inter:Inter):
+        """List all of the birthday commands"""
+
+        embed = BirthdayHelpEmbed(
+            inter,
+            self.get_app_commands()[0].commands
+        )
+        await inter.response.send_message(embed=embed, ephemeral=True)
 
     @group.command(name='next')
     async def see_next_birthday(self, inter:Inter):
@@ -189,6 +192,82 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Send the embed to the user, ending the interaction
         await inter.response.send_message(embed=embed, ephemeral=True)
+
+    @group.command(name='save')
+    async def add_birthday(self, inter:Inter):
+        """Save your birthday to the database."""
+
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            inter.user.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
+            await inter.response.send_message(
+                "You already have a birthday set!",
+                ephemeral=True
+            )
+            return
+
+        def save_bday(birthday):
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                inter.user.id, birthday
+            )
+
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
+
+    @group.command(name='forget')
+    async def remove_birthday(self, inter:Inter):
+        """Remove your birthday from the database."""
+
+        # Delete the birthday from the database
+        db.execute(
+            "DELETE FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
+        db.commit()
+
+        log.info('Birthday removed for %s', inter.user.display_name)
+
+        # Let the user know their birthday has been removed
+        await inter.response.send_message(
+            'If I knew it, I\'ve forgotten your birthday!',
+            ephemeral=True
+        )
+
+    @group.command(name='see')
+    async def get_birthday(self, inter:Inter):
+        """See your birthday if it is saved."""
+
+        # Get the birthday from the database that matches the member id
+        data = db.record(
+            "SELECT birthday FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
+
+        # If the user doesn't have a birthday saved
+        if not data:
+            await inter.response.send_message(
+                'I don\'t know your birthday, sorry!'
+                '\nYou can save it with `/birthday save DD/MM/YYYY`',
+            )
+            return
+
+        # Inform the user of their saved birthday
+        await inter.response.send_message(
+            f'Your birthday is on {data[0]}!'
+        )
+
+    # Admin birthday commands are in this group
+    admin_group = app_commands.Group(
+        parent=group,
+        name='admin',
+        description='Admin birthday commands'
+    )
 
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
@@ -271,79 +350,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             'Checked birthdays!',
             ephemeral=True
         )
-
-    @group.command(name='save')
-    async def add_birthday(self, inter:Inter):
-        """
-        Save your birthday and recieve a happy birthday message
-        on your birthday.
-        """
-
-        # Check if the member already has a birthday saved in the database
-        birthday_exists = db.record(
-            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
-            inter.user.id
-        )
-
-        # Prevent the user from saving multiple birthdays
-        if birthday_exists:
-            await inter.response.send_message(
-                "You already have a birthday set!",
-                ephemeral=True
-            )
-            return
-
-        def save_bday(birthday):
-            db.execute(
-                "INSERT INTO user_birthdays VALUES (?, ?)",
-                inter.user.id, birthday
-            )
-
-        modal = BirthdayModal(save_func=save_bday)
-        await inter.response.send_modal(modal)
-
-    @group.command(name='forget')
-    async def remove_birthday(self, inter:Inter):
-        """Remove your birthday from the database."""
-
-        # Delete the birthday from the database
-        db.execute(
-            "DELETE FROM user_birthdays WHERE user_id = ?",
-            inter.user.id
-        )
-        db.commit()
-
-        log.info('Birthday removed for %s', inter.user.display_name)
-
-        # Let the user know their birthday has been removed
-        await inter.response.send_message(
-            'If I knew it, I\'ve forgotten your birthday!',
-            ephemeral=True
-        )
-
-    @group.command(name='see')
-    async def get_birthday(self, inter:Inter):
-        """See your birthday if it is saved."""
-
-        # Get the birthday from the database that matches the member id
-        data = db.record(
-            "SELECT birthday FROM user_birthdays WHERE user_id = ?",
-            inter.user.id
-        )
-
-        # If the user doesn't have a birthday saved
-        if not data:
-            await inter.response.send_message(
-                'I don\'t know your birthday, sorry!'
-                '\nYou can save it with `/birthday save DD/MM/YYYY`',
-            )
-            return
-
-        # Inform the user of their saved birthday
-        await inter.response.send_message(
-            f'Your birthday is on {data[0]}!'
-        )
-
 
 async def setup(bot):
     """Extension setup function"""
