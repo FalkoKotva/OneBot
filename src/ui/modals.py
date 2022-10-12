@@ -1,11 +1,11 @@
 """ui modals"""
 
 import logging
+from typing import Callable
+from datetime import datetime
 import discord
 from discord import Interaction as Inter
 from discord import ui as dui
-from typing import Callable
-from datetime import datetime
 
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class BirthdayModal(dui.Modal, title='Birthday'):
         super().__init__()
         self._save_func = save_func
 
-    async def on_submit(self, inter:Inter):
+    async def on_submit(self, inter:Inter):  # pylint: disable=arguments-differ
 
         # Get the entered birthday
         value = self.birthday_input.value
@@ -46,7 +46,7 @@ class BirthdayModal(dui.Modal, title='Birthday'):
             ephemeral=True
         )
 
-    async def on_error(self, inter:Inter, error):
+    async def on_error(self, inter:Inter, error):  # pylint: disable=arguments-differ
 
         if isinstance(error, ValueError):
             msg = 'Invalid date format. Please try again.'

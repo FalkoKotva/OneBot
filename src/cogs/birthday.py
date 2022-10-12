@@ -1,19 +1,18 @@
 """Cog for the automated birthday celebration system."""
 
 import logging
-import discord
-from discord import app_commands, Interaction as Inter
-from discord.ext import tasks
+from functools import cache
 from datetime import datetime, time
 from num2words import num2words
-from functools import cache
+from discord.ext import tasks
+from discord import app_commands, Interaction as Inter
+import discord
 
-from . import BaseCog
 from utils import normalized_name
 from constants import DATE_FORMAT
-from exceptions import NoNextBirthday
-from ui import BirthdayModal, NextBirthdayEmbed
+from ui import BirthdayModal, NextBirthdayEmbed, BirthdayHelpEmbed
 from db import db
+from . import BaseCog
 
 
 log = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         super().__init__(bot=bot)
 
         # Start the task to check for birthdays
-        self.check_birthdays.start()
+        self.check_birthdays.start()  # pylint: disable=no-member
 
     @tasks.loop(time=time(hour=7))
     async def check_birthdays(self):
@@ -84,10 +83,9 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # If the member is not in the guild, we can't celebrate
         if not member:
-            # TODO: remove user bday from database
             log.debug(
-                f'Member ({user_id}) not found, '
-                'skipping their birthday'
+                'Member %s not found, skipping their birthday',
+                normalized_name(member)
             )
             return
 
@@ -142,14 +140,11 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Remove the role from the member
         if role in member.roles:
-            log.info(f'Removing birthday role from {name}')
+            log.info('Removing birthday role from %s;', name)
             await member.remove_roles(role)
             return
 
-        log.debug(
-            'Birthday role not found, '
-            f'skipping {name}'
-        )
+        log.debug('Birthday role not found on member, skipping %s', name)
 
 
     # All birthday commands are in this group
@@ -158,12 +153,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Birthday commands'
     )
 
-    # Admin birthday commands are in this group
-    admin_group = app_commands.Group(
-        parent=group,
-        name='admin',
-        description='Admin birthday commands'
-    )
+    @group.command(name='help')
+    async def list_bday_commands(self, inter:Inter):
+        """List all of the birthday commands"""
+
+        embed = BirthdayHelpEmbed(
+            inter,
+            self.get_app_commands()[0].commands
+        )
+        await inter.response.send_message(embed=embed, ephemeral=True)
 
     @group.command(name='next')
     async def see_next_birthday(self, inter:Inter):
@@ -178,7 +176,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                 "There are no birthdays in my database.",
                 ephemeral=True
             )
-            return
+            return  # important! we can't continue with no birthdays
 
         # Convert the birthdays to datetime objects
         birthdays = [
@@ -194,6 +192,82 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Send the embed to the user, ending the interaction
         await inter.response.send_message(embed=embed, ephemeral=True)
+
+    @group.command(name='save')
+    async def add_birthday(self, inter:Inter):
+        """Save your birthday to the database."""
+
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            inter.user.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
+            await inter.response.send_message(
+                "You already have a birthday set!",
+                ephemeral=True
+            )
+            return
+
+        def save_bday(birthday):
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                inter.user.id, birthday
+            )
+
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
+
+    @group.command(name='forget')
+    async def remove_birthday(self, inter:Inter):
+        """Remove your birthday from the database."""
+
+        # Delete the birthday from the database
+        db.execute(
+            "DELETE FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
+        db.commit()
+
+        log.info('Birthday removed for %s', inter.user.display_name)
+
+        # Let the user know their birthday has been removed
+        await inter.response.send_message(
+            'If I knew it, I\'ve forgotten your birthday!',
+            ephemeral=True
+        )
+
+    @group.command(name='see')
+    async def get_birthday(self, inter:Inter):
+        """See your birthday if it is saved."""
+
+        # Get the birthday from the database that matches the member id
+        data = db.record(
+            "SELECT birthday FROM user_birthdays WHERE user_id = ?",
+            inter.user.id
+        )
+
+        # If the user doesn't have a birthday saved
+        if not data:
+            await inter.response.send_message(
+                'I don\'t know your birthday, sorry!'
+                '\nYou can save it with `/birthday save DD/MM/YYYY`',
+            )
+            return
+
+        # Inform the user of their saved birthday
+        await inter.response.send_message(
+            f'Your birthday is on {data[0]}!'
+        )
+
+    # Admin birthday commands are in this group
+    admin_group = app_commands.Group(
+        parent=group,
+        name='admin',
+        description='Admin birthday commands'
+    )
 
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
@@ -211,15 +285,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
-        # Get list of members and their birthdays
-        bday_list = [
+        # Get generator of members and their birthdays
+        bday_gen = (
             f'{inter.guild.get_member(uid).mention}: {bday}'
             for uid, bday in data
-        ]
+        )
 
         # Put the list into a string and send it
         await inter.response.send_message(
-            '\n'.join(bday_list),
+            '\n'.join(bday_gen),
             ephemeral=True
         )
 
@@ -276,78 +350,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             'Checked birthdays!',
             ephemeral=True
         )
-
-    @group.command(name='save')
-    async def add_birthday(self, inter:Inter):
-        """
-        Save your birthday and recieve a happy birthday message
-        on your birthday.
-        """
-
-        # Check if the member already has a birthday saved in the database
-        birthday_exists = not not db.record(
-            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
-            inter.user.id
-        )
-
-        # Prevent the user from saving multiple birthdays
-        if birthday_exists:
-            await inter.response.send_message(
-                "You already have a birthday set!",
-                ephemeral=True
-            )
-            return
-
-        save_bday = lambda birthday: db.execute(
-            "INSERT INTO user_birthdays VALUES (?, ?)",
-            inter.user.id, birthday
-        )
-
-        modal = BirthdayModal(save_func=save_bday)
-        await inter.response.send_modal(modal)
-
-    @group.command(name='forget')
-    async def remove_birthday(self, inter:Inter):
-        """Remove your birthday from the database."""
-
-        # Delete the birthday from the database
-        db.execute(
-            "DELETE FROM user_birthdays WHERE user_id = ?",
-            inter.user.id
-        )
-        db.commit()
-
-        log.info(f'Birthday removed for {inter.user.display_name}')
-
-        # Let the user know their birthday has been removed
-        await inter.response.send_message(
-            'If I knew it, I\'ve forgotten your birthday!',
-            ephemeral=True
-        )
-
-    @group.command(name='see')
-    async def get_birthday(self, inter:Inter):
-        """See your birthday if it is saved."""
-
-        # Get the birthday from the database that matches the member id
-        data = db.record(
-            "SELECT birthday FROM user_birthdays WHERE user_id = ?",
-            inter.user.id
-        )
-
-        # If the user doesn't have a birthday saved
-        if not data:
-            await inter.response.send_message(
-                'I don\'t know your birthday, sorry!'
-                '\nYou can save it with `/birthday save DD/MM/YYYY`',
-            )
-            return
-
-        # Inform the user of their saved birthday
-        await inter.response.send_message(
-            f'Your birthday is on {data[0]}!'
-        )
-
 
 async def setup(bot):
     """Extension setup function"""

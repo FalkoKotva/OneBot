@@ -4,6 +4,9 @@
 ACTIVITY_MSG = 'I am up and running!'
 DATE_FORMAT = '%d/%m/%Y'
 
+# Command constants
+BDAY_HELP_MSG = 'Use `/birthday help` for more info'
+
 # MSGS
 BAD_TOKEN = 'You have passed an improper or invalid token! Shutting down...'
 NO_TOKEN = 'TOKEN file not found in project root! Shutting down...'
