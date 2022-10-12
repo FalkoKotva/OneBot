@@ -4,12 +4,36 @@ import logging
 from datetime import datetime
 import discord
 from discord import Interaction as Inter
+from tabulate import tabulate
 
-from constants import DATE_FORMAT
 from utils import normalized_name
+from constants import BDAY_HELP_MSG
 
 
 log = logging.getLogger(__name__)
+
+
+class BirthdayHelpEmbed(discord.Embed):
+    """Embed for listing birthday commands"""
+
+    def __init__(self, inter:Inter, app_commands:list):
+
+        # Create a table of the commands
+        desc = tabulate(
+            [
+                # /command - description
+                (f'/{cmd.qualified_name}', cmd.description)
+                for cmd in app_commands
+            ],
+            headers=('Command', 'Description')
+        )
+
+        # Initialize the embed
+        super().__init__(
+            title='Help - Birthday Commands',
+            description=f'```{desc}```',
+            colour=discord.Colour.dark_gold()
+        )
 
 
 class NextBirthdayEmbed(discord.Embed):
@@ -35,20 +59,19 @@ class NextBirthdayEmbed(discord.Embed):
 
         # Get the member object
         member = inter.guild.get_member(member_id)
-        # Cast the birthday to a formatted string
-        bday_str = birthday.strftime(DATE_FORMAT)
-        # Get the number of days until the next birthday
-        days_until = (birthday - now).days
+
+        # Get the unix timestamp for the birthday
+        unix = int(birthday.timestamp())
 
         log.debug(
-            'Found Birthday: %s birthday = %s, days until = %s',
-            normalized_name(member), birthday, days_until
+            'Found Birthday: %s unix_timestamp: %s',
+            normalized_name(member), unix
         )
 
         # Set the title and description
         title = 'Next Birthday'
-        desc = f'Next birthday will be for {member.mention} on'\
-            f'{bday_str} which is in {days_until} days'
+        desc = f'Next birthday will be for {member.mention} on '\
+               f'<t:{unix}:D> which is <t:{unix}:R>'
 
         log.debug('Initializing NextBirthdayEmbed')
 
@@ -56,6 +79,8 @@ class NextBirthdayEmbed(discord.Embed):
         super().__init__(
             title=title,
             description=desc,
-            colour=member.colour,
-            timestamp=inter.created_at
+            colour=member.colour
         )
+
+        self.set_thumbnail(url=member.display_avatar.url)
+        self.set_footer(text=BDAY_HELP_MSG)
