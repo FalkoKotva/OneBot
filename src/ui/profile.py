@@ -2,10 +2,10 @@
 
 import json
 import logging
-import discord
-import requests
 import textwrap
 from io import BytesIO
+import discord
+import requests
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -21,7 +21,7 @@ class ProfileImage:
     image: Image.Image
     template: Image.Image = Image.open('assets/profile/template.png')
 
-    with open('assets/profile/profile.json') as f:
+    with open('assets/profile/profile.json', encoding='utf-8') as f:
         data: dict = json.load(f)
 
     def __init__(self, member:discord.Member):
@@ -34,21 +34,27 @@ class ProfileImage:
         """
 
         try:
-            bytes = BytesIO(await asset.read())
+            im_bytes = BytesIO(await asset.read())
         except AttributeError as err:
             log.error(
-                f'Failed to get asset image, using default image \
-                    instead. Err: {err}'
+                'Failed to get asset image, using default image '\
+                'instead. Err: %s', err
             )
-            bytes = BytesIO(
+            im_bytes = BytesIO(
                 requests.get(
-                    'https://cdn.discordapp.com/embed/avatars/0.png'
+                    'https://cdn.discordapp.com/embed/avatars/0.png',
+                    timeout=30
                 ).content
             )
 
-        return Image.open(bytes).convert('RGBA')
+        return Image.open(im_bytes).convert('RGBA')
 
-    async def _wrap_text(self, draw:ImageDraw.ImageDraw, text:str, pos:tuple[int, int], font:ImageFont.ImageFont) -> None:
+    async def _wrap_text(
+        self,
+        draw:ImageDraw.ImageDraw,
+        text:str, pos:tuple[int, int],
+        font:ImageFont.ImageFont
+    ) -> None:
         """
         Insert text into an image.
         """
@@ -62,8 +68,8 @@ class ProfileImage:
                 (margin, offset), line, font=font, fill='white', anchor='mt'
             )
             offset += font.getsize(line)[1]
-            log.debug(f'text lines: {i+1}')
-        
+            log.debug('text lines: %s', i + 1)
+
         log.debug('text wrap calculated.')
 
     async def create(self) -> None:
@@ -73,7 +79,7 @@ class ProfileImage:
         """
 
         member: discord.Member = self.member
-        log.info(f'Creating profile card for {member.name}')
+        log.info('Creating profile card for %s', member.name)
 
         # Avatar is the member's profile picture
         log.debug('Getting avatar...')
@@ -88,7 +94,7 @@ class ProfileImage:
             'RGBA', (banner_data['width'], banner_data['height']),
             color=discord.Colour.blurple().to_rgb()
         )
-        
+
         # Level bar is an alias for exp bar
         log.debug('Creating level bar...')
         bar_data = self.data['levelbar']
@@ -96,7 +102,7 @@ class ProfileImage:
             'RGBA', (bar_data['width'], bar_data['height']),
             color=bar_data['colour']
         )
-        bar = Image.new(
+        im_bar = Image.new(
             'RGBA', (int(bar_data['width']*0.6), bar_data['height']),
             color=discord.Colour.blurple().to_rgb()
         )
@@ -107,9 +113,9 @@ class ProfileImage:
         final_image.paste(avatar, (avatar_data['x'], avatar_data['y']), avatar)
         final_image.paste(banner, (banner_data['x'], banner_data['y']), banner)
         final_image.paste(bar_trough, (bar_data['x'], bar_data['y']), bar_trough)
-        final_image.paste(bar, (bar_data['x'], bar_data['y']), bar)
+        final_image.paste(im_bar, (bar_data['x'], bar_data['y']), im_bar)
         final_image.paste(self.template, (0, 0), self.template)
-        
+
         log.debug('Adding text...')
 
         draw = ImageDraw.Draw(final_image)

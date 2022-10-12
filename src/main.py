@@ -2,8 +2,8 @@
 
 import json
 import logging
-import discord
 import asyncio
+import discord
 
 from bot import Bot
 from logs import setup_logs
@@ -13,11 +13,12 @@ from constants import BAD_TOKEN, NO_TOKEN, NO_CONFIG
 log = logging.getLogger('main')
 
 async def main():
+    """Main function for starting the application"""
 
     # Get the bot config
     try:
-        with open('./data/test.config.json', 'r', encoding='utf-8') as f:
-            config = json.load(f)
+        with open('./data/test.config.json', 'r', encoding='utf-8') as file:
+            config = json.load(file)
     except FileNotFoundError:
         print(NO_CONFIG)
         return
@@ -28,8 +29,8 @@ async def main():
 
     # Get the secret token
     try:
-        with open('TOKEN', 'r', encoding='utf-8') as f:
-            token = f.read()
+        with open('TOKEN', 'r', encoding='utf-8') as file:
+            token = file.read()
     except FileNotFoundError:
         log.critical(NO_TOKEN)
         return

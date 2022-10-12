@@ -1,19 +1,18 @@
 """Cog for the automated birthday celebration system."""
 
 import logging
-import discord
-from discord import app_commands, Interaction as Inter
-from discord.ext import tasks
+from functools import cache
 from datetime import datetime, time
 from num2words import num2words
-from functools import cache
+from discord.ext import tasks
+from discord import app_commands, Interaction as Inter
+import discord
 
-from . import BaseCog
 from utils import normalized_name
 from constants import DATE_FORMAT
-from exceptions import NoNextBirthday
 from ui import BirthdayModal, NextBirthdayEmbed
 from db import db
+from . import BaseCog
 
 
 log = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         super().__init__(bot=bot)
 
         # Start the task to check for birthdays
-        self.check_birthdays.start()
+        self.check_birthdays.start()  # pylint: disable=no-member
 
     @tasks.loop(time=time(hour=7))
     async def check_birthdays(self):
@@ -84,10 +83,9 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # If the member is not in the guild, we can't celebrate
         if not member:
-            # TODO: remove user bday from database
             log.debug(
-                f'Member ({user_id}) not found, '
-                'skipping their birthday'
+                'Member %s not found, skipping their birthday',
+                normalized_name(member)
             )
             return
 
@@ -142,14 +140,11 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Remove the role from the member
         if role in member.roles:
-            log.info(f'Removing birthday role from {name}')
+            log.info('Removing birthday role from %s;', name)
             await member.remove_roles(role)
             return
 
-        log.debug(
-            'Birthday role not found, '
-            f'skipping {name}'
-        )
+        log.debug('Birthday role not found on member, skipping %s', name)
 
 
     # All birthday commands are in this group
@@ -178,7 +173,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
                 "There are no birthdays in my database.",
                 ephemeral=True
             )
-            return
+            return  # important! we can't continue with no birthdays
 
         # Convert the birthdays to datetime objects
         birthdays = [
@@ -211,15 +206,15 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
-        # Get list of members and their birthdays
-        bday_list = [
+        # Get generator of members and their birthdays
+        bday_gen = (
             f'{inter.guild.get_member(uid).mention}: {bday}'
             for uid, bday in data
-        ]
+        )
 
         # Put the list into a string and send it
         await inter.response.send_message(
-            '\n'.join(bday_list),
+            '\n'.join(bday_gen),
             ephemeral=True
         )
 
@@ -285,7 +280,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         """
 
         # Check if the member already has a birthday saved in the database
-        birthday_exists = not not db.record(
+        birthday_exists = db.record(
             """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
             inter.user.id
         )
@@ -298,10 +293,11 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             )
             return
 
-        save_bday = lambda birthday: db.execute(
-            "INSERT INTO user_birthdays VALUES (?, ?)",
-            inter.user.id, birthday
-        )
+        def save_bday(birthday):
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                inter.user.id, birthday
+            )
 
         modal = BirthdayModal(save_func=save_bday)
         await inter.response.send_modal(modal)
@@ -317,7 +313,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
         db.commit()
 
-        log.info(f'Birthday removed for {inter.user.display_name}')
+        log.info('Birthday removed for %s', inter.user.display_name)
 
         # Let the user know their birthday has been removed
         await inter.response.send_message(

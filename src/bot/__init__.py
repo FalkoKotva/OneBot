@@ -3,14 +3,14 @@
 import os
 import time
 import logging
+from datetime import timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import discord
 from discord.ext import commands
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import timedelta
 
-from .cog_manager import CogManager
 from constants import ACTIVITY_MSG
 from db import db
+from .cog_manager import CogManager
 
 
 log = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ class Bot(commands.Bot):
 
         if not self.commands_synced:
             await self.tree.sync()
+            await self.tree.sync(guild=self.get_guild(self.main_guild_id))
             self.commands_synced = True
             log.info('App Commands Synced')
 
@@ -93,7 +94,7 @@ class Bot(commands.Bot):
         # Start the scheduler
         self.scheduler.start()
 
-        log.info(f'Logged in as {self.user} (ID: {self.user.id})')
+        log.info('Logged in as %s (ID: %s)', self.user, self.user.id)
 
         # Send a message into the discord log channel
         log_channel_id = self.config['guild']['channel_ids']['logs']
@@ -103,7 +104,7 @@ class Bot(commands.Bot):
     async def close(self):
         """Handles the shutdown process of the bot"""
 
-        log.info(f'Shutting down...')
+        log.info('Shutting down...')
         filename = os.path.basename(self.log_filepath)
 
         # Create a discord file object
@@ -130,7 +131,7 @@ class Bot(commands.Bot):
         # The cog manager is loaded seperately so that it can not be
         # unloaded because it is used to unload other cogs.
         cog_manager = CogManager(self)
-        log.info(f'Loading {cog_manager.qualified_name}')
+        log.info('Loading %s', cog_manager.qualified_name)
         await self.add_cog(cog_manager)
 
         log.info('Loading cog files')
@@ -140,10 +141,11 @@ class Bot(commands.Bot):
             # Skip non cog files
             if not filename.endswith('.py') or filename.startswith('_'):
                 log.debug(
-                    f'Skipping non cog file {filename} in cogs directory'
+                    'Skipping non cog file %s in cogs directory',
+                    filename
                 )
                 continue
 
             # Load the cog
             await self.load_extension(f'cogs.{filename[:-3]}')
-            log.debug(f'Loading cog file: {filename}')
+            log.debug('Loading cog file: %s', filename)

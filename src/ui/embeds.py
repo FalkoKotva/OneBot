@@ -1,9 +1,9 @@
 """Embeds for the project"""
 
 import logging
+from datetime import datetime
 import discord
 from discord import Interaction as Inter
-from datetime import datetime
 
 from constants import DATE_FORMAT
 from utils import normalized_name
@@ -17,7 +17,7 @@ class NextBirthdayEmbed(discord.Embed):
 
     def __init__(self, inter:Inter, birthdays:list[tuple[int, datetime]]):
 
-        log.debug('Creating NextBirthdayEmbed')        
+        log.debug('Creating new NextBirthdayEmbed')
 
         now = datetime.now()
 
@@ -27,24 +27,28 @@ class NextBirthdayEmbed(discord.Embed):
             birthday = birthday.replace(year=now.year)
             if not birthday < now:
                 break
-        
-        else:
+
+        else:  #nobreak
             # The next birthday is next year
             member_id, birthday = birthdays[0]
             birthday = birthday.replace(now.year + 1)
 
+        # Get the member object
         member = inter.guild.get_member(member_id)
+        # Cast the birthday to a formatted string
         bday_str = birthday.strftime(DATE_FORMAT)
+        # Get the number of days until the next birthday
         days_until = (birthday - now).days
-        
+
         log.debug(
-            f'Birthday found: {normalized_name(member)} \
-                {birthday=} {days_until=}'
+            'Found Birthday: %s birthday = %s, days until = %s',
+            normalized_name(member), birthday, days_until
         )
 
+        # Set the title and description
         title = 'Next Birthday'
-        desc = 'Next birthday will be for {} on {} which is in {} days' \
-            .format(member.mention, bday_str, days_until)
+        desc = f'Next birthday will be for {member.mention} on'\
+            f'{bday_str} which is in {days_until} days'
 
         log.debug('Initializing NextBirthdayEmbed')
 
