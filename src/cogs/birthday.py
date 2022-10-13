@@ -128,7 +128,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Get the guild
         guild_id = self.bot.main_guild_id
-        guild = self.bot.get_guild(guild_id)
+        guild = await self.bot.fetch_guild(guild_id)
 
         # Get the birthday role
         role_id = self.bot.config['guild']['role_ids']['birthday']
