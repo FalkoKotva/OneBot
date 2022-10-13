@@ -19,7 +19,7 @@ async def get_member(interaction: discord.Interaction, member: str):
     """
 
     guild = interaction.guild
-    
+
     # If the member is digits, it's likely a user id
     if member.isdigit():
         return guild.get_member(int(member))

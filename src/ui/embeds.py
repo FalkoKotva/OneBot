@@ -39,7 +39,12 @@ class BirthdayHelpEmbed(discord.Embed):
 class NextBirthdayEmbed(discord.Embed):
     """Embed for the next persons birthday"""
 
-    def __init__(self, inter:Inter, birthdays:list[tuple[int, datetime]]):
+    def __init__(
+        self,
+        inter:Inter,
+        birthdays:list[tuple[int, datetime]],
+        reaction:discord.Reaction
+    ):
 
         log.debug('Creating new NextBirthdayEmbed')
 

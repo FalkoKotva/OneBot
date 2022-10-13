@@ -127,7 +127,7 @@ class Bot(commands.Bot):
         """
         Attempts to load all .py files in the cogs directory as cogs.
         """
-        
+
         # The cog manager is loaded seperately so that it can not be
         # unloaded because it is used to unload other cogs.
         cog_manager = CogManager(self)
