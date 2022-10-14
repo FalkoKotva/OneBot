@@ -66,7 +66,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             # It's there birthday, celebrate!
             await self.celebrate_birthday(user_id, age)
 
-    @cache
     async def celebrate_birthday(self, user_id, age):
         """Celebrate a user's birthday.
 

@@ -14,6 +14,54 @@ from constants import BDAY_HELP_MSG
 log = logging.getLogger(__name__)
 
 
+class HelpChannelsEmbed(discord.Embed):
+    """Embed to list channels and their descriptions"""
+
+    def __init__(self, channels:list[discord.TextChannel]):
+
+        # A shorthand for the guild
+        guild = channels[0].guild
+
+        super().__init__(
+            title=f'Help - {guild.name} Channels',
+            description='A list of channels and their topics',
+            colour=discord.Colour.gold(),
+        )
+
+        # Get all of the channels and topics into lists
+        channel_names, channel_topics = [], []
+        for channel in channels:
+            if not isinstance(channel, discord.TextChannel):
+                continue
+
+            if len(str(channel.topic)) > 60:
+                channel.topic = channel.topic[:56] + ' ...'
+
+            channel_names.append(channel.mention)
+            channel_topics.append(channel.topic or '\u200b')
+
+        # Display all of the channel names
+        self.add_field(
+            name='Channel Name',
+            value='\n'.join(channel_names)
+        )
+
+        # Display all of the channel topics
+        self.add_field(
+            name='Channel Topic',
+            value='\n'.join(channel_topics)
+        )
+
+        # Get the guild icon url for the footer
+        url = guild.icon.url if guild.icon else None
+
+        # Add a footer with a help message
+        self.set_footer(
+            text='Use `/help` to get more help commands',
+            icon_url=url
+        )
+
+
 class BirthdayHelpEmbed(discord.Embed):
     """Embed for listing birthday commands"""
 
@@ -33,7 +81,7 @@ class BirthdayHelpEmbed(discord.Embed):
         super().__init__(
             title='Help - Birthday Commands',
             description=f'```{desc}```',
-            colour=discord.Colour.dark_gold()
+            colour=discord.Colour.gold()
         )
 
 
