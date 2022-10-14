@@ -5,6 +5,7 @@ from datetime import datetime
 import discord
 from discord import Interaction as Inter
 from tabulate import tabulate
+from num2words import num2words
 
 from utils import normalized_name
 from constants import BDAY_HELP_MSG
@@ -36,14 +37,46 @@ class BirthdayHelpEmbed(discord.Embed):
         )
 
 
+class CelebrateBirthdayEmbed(discord.Embed):
+    """Embed for celebrating birthdays"""
+
+    def __init__(
+        self,
+        member:discord.Member,
+        age:int,
+        member_count:int,
+        reactions:tuple
+    ):
+        ordinal_age = num2words(age, to='ordinal_num')
+        text_reactions = ' or '.join(reactions)
+
+        # This is the celebration message
+        desc = 'Congratulations on another year of life!' \
+               f'\n\nHappy {ordinal_age} birthday {member.mention}!' \
+               f'\nAll **{member_count}** of us here on the '  \
+                'server are wishing you the greatest of days!' \
+               f'\n\nReact with {text_reactions} to celebrate!'
+
+        # Footer text
+        f_text = 'Learn about birthdays with `/birthday help`'
+
+        super().__init__(
+            title='Happy Birthday!',
+            description=desc,
+            colour=member.colour
+        )
+
+        self.set_thumbnail(url=member.display_avatar.url)
+        self.set_footer(text=f_text)
+
+
 class NextBirthdayEmbed(discord.Embed):
     """Embed for the next persons birthday"""
 
     def __init__(
         self,
         inter:Inter,
-        birthdays:list[tuple[int, datetime]],
-        reaction:discord.Reaction
+        birthdays:list[tuple[int, datetime]]
     ):
 
         log.debug('Creating new NextBirthdayEmbed')

@@ -10,7 +10,12 @@ import discord
 
 from utils import normalized_name
 from constants import DATE_FORMAT
-from ui import BirthdayModal, NextBirthdayEmbed, BirthdayHelpEmbed
+from ui import (
+    BirthdayModal,
+    NextBirthdayEmbed,
+    BirthdayHelpEmbed,
+    CelebrateBirthdayEmbed
+)
 from db import db
 from . import BaseCog
 
@@ -72,7 +77,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Get the channel to celebrate in
         channel_id = self.bot.config['guild']['channel_ids']['alerts']
-        channel = self.bot.get_channel(channel_id)
+        channel: discord.TextChannel = await self.bot.get.channel(channel_id)
 
         # Get the birthday role
         role_id = self.bot.config['guild']['role_ids']['birthday']
@@ -92,30 +97,26 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Assign the birthday role to the member
         await member.add_roles(role)
 
-        # Ordinalise the age
-        ordinal_age = num2words(age, to='ordinal_num')
-
         # Number of members in the guild
-        user_count = len(channel.guild.members) - 1  # -1 for the user
+        member_count = len(channel.guild.members) - 1  # -1 for the user
 
-        # This is the celebration message
-        desc = f'Happy {ordinal_age} birthday {member.mention}!' \
-            '\nCongratulations on another year of life! ' \
-            f'All **{user_count}** of us here on the server' \
-            ' are wishing you a great day!'
+        # Reactions
+        reactions = ('🎂', '🎉')
 
-        # This embed contains the celebration message
-        embed = discord.Embed(
-            title='Happy Birthday!',
-            description=desc,
-            colour=member.colour
+        # Create the celebration embed
+        embed = CelebrateBirthdayEmbed(
+            member=member,
+            age=age,
+            member_count=member_count,
+            reactions=reactions
         )
 
-        # Set the thumbnail to the user's avatar
-        embed.set_thumbnail(url=member.display_avatar.url)
-
         # Send the celebration announcement!
-        await channel.send(embed=embed)
+        msg = await channel.send(embed=embed)
+
+        # Add the reactions to the sent message!
+        for reaction in reactions:
+            await msg.add_reaction(reaction)
 
     async def wrap_up_birthday(self, user_id:int):
         """Stop celebrating a user birthday
@@ -128,14 +129,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Get the guild
         guild_id = self.bot.main_guild_id
-        guild = await self.bot.fetch_guild(guild_id)
+        guild: discord.Guild = await self.bot.get.guild(guild_id)
 
         # Get the birthday role
         role_id = self.bot.config['guild']['role_ids']['birthday']
         role = guild.get_role(role_id)
 
         # Get the user
-        member = guild.get_member(user_id)
+        member = await guild.fetch_member(user_id)
         name = normalized_name(member)
 
         # Remove the role from the member
