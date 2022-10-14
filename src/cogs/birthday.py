@@ -268,7 +268,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         parent=group,
         name='admin',
         description='Admin birthday commands',
-        default_permissions=discord.Permissions(moderate_members=True)
+        default_permissions=discord.Permissions(administrator=True)
     )
 
     @admin_group.command(name='savefor')
