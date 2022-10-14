@@ -55,6 +55,12 @@ def check_is_owner(inter:Inter) -> bool:
     log.debug(f'Checking if user ({inter.user.id}) is owner {result}')
     return result
 
+def is_admin(inter:Inter, bot) -> bool:
+    """Returns bool if member has admin role"""
+
+    role = discord.utils.get(inter.guild.roles, id=bot.config['guild']['role_ids']['admin'])
+    return role in inter.user.roles
+
 def normalized_name(member:discord.Member, with_id:bool=True) -> str:
     """Returns the member's name followed by their
     discriminator and ID.
