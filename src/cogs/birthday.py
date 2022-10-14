@@ -270,6 +270,34 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         description='Admin birthday commands'
     )
 
+    @admin_group.command(name='savefor')
+    @app_commands.default_permissions(moderate_members=True)
+    async def add_birthday_for(self, inter:Inter, member:discord.Member):
+        """Add a birthday for another member"""
+
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            member.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
+            await inter.response.send_message(
+                "You already have a birthday set!",
+                ephemeral=True
+            )
+            return
+
+        def save_bday(birthday):
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                member.id, birthday
+            )
+
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
+
     @admin_group.command(name='list')
     @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
