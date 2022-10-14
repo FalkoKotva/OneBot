@@ -24,14 +24,13 @@ class CogManager(BaseCog, name='Cog Manager'):
 
     def __init__(self, bot:commands.Bot):
         super().__init__(bot)
-        self.group.guild_ids = (bot.main_guild.id)
 
     group = app_commands.Group(
         name='cog',
         description='Cog management commands',
         default_permissions=discord.Permissions(moderate_members=True)
     )
-    
+
     async def _cog_command_wrapper(
         self,
         inter:Inter,
