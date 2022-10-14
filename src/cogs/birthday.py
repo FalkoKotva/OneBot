@@ -267,11 +267,38 @@ class BirthdayCog(BaseCog, name='Birthdays'):
     admin_group = app_commands.Group(
         parent=group,
         name='admin',
-        description='Admin birthday commands'
+        description='Admin birthday commands',
+        default_permissions=discord.Permissions(moderate_members=True)
     )
 
+    @admin_group.command(name='savefor')
+    async def add_birthday_for(self, inter:Inter, member:discord.Member):
+        """Add a birthday for another member"""
+
+        # Check if the member already has a birthday saved in the database
+        birthday_exists = db.record(
+            """SELECT user_id FROM user_birthdays WHERE user_id = ?""",
+            member.id
+        )
+
+        # Prevent the user from saving multiple birthdays
+        if birthday_exists:
+            await inter.response.send_message(
+                "You already have a birthday set!",
+                ephemeral=True
+            )
+            return
+
+        def save_bday(birthday):
+            db.execute(
+                "INSERT INTO user_birthdays VALUES (?, ?)",
+                member.id, birthday
+            )
+
+        modal = BirthdayModal(save_func=save_bday)
+        await inter.response.send_modal(modal)
+
     @admin_group.command(name='list')
-    @app_commands.default_permissions(moderate_members=True)
     async def list_birthdays(self, inter:Inter):
         """Returns list of members and their birthdays."""
 
@@ -299,7 +326,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
     @admin_group.command(name='celebrate')
-    @app_commands.default_permissions(moderate_members=True)
     async def force_celebrate_birthday(
         self,
         inter:Inter,
@@ -321,7 +347,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
     @admin_group.command(name='wrapup')
-    @app_commands.default_permissions(moderate_members=True)
     async def force_wrap_up_birthday(
         self,
         inter:Inter,
@@ -339,7 +364,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         )
 
     @admin_group.command(name='check')
-    @app_commands.default_permissions(moderate_members=True)
     async def force_check_birthdays(self, inter:Inter):
         """Force check for birthdays, skipping the daily auto check."""
 
