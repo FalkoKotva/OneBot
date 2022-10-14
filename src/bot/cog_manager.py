@@ -1,11 +1,12 @@
 """Cog commands"""
 
 import logging
+from typing import Callable
+
 import discord
 from discord import app_commands
 from discord import Interaction as Inter
 from discord.ext import commands
-from typing import Callable
 
 from cogs import BaseCog
 from utils import list_cogs, to_choices
@@ -151,7 +152,7 @@ class CogManager(BaseCog, name='Cog Manager'):
     @group.command(name='list')
     async def list_cogs(self, inter:Inter):
         """Responds with a list of all cogs."""
-        
+
         output = '**List of cogs:**\n'
         cogs = self.bot.cogs.values()
         output += '\n'.join([cog.qualified_name for cog in cogs])

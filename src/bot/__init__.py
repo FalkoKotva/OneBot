@@ -4,12 +4,14 @@ import os
 import time
 import logging
 from datetime import timedelta
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import discord
 from discord.ext import commands
 
 from constants import ACTIVITY_MSG
 from db import db
+from ._get import Get
 from .cog_manager import CogManager
 
 
@@ -35,6 +37,7 @@ class Bot(commands.Bot):
 
         self.config = config
         self.log_filepath = log_filepath
+        self.get: Get = Get(self)
 
         # Scehdule the database autosaving
         self.scheduler = AsyncIOScheduler()
@@ -127,7 +130,7 @@ class Bot(commands.Bot):
         """
         Attempts to load all .py files in the cogs directory as cogs.
         """
-        
+
         # The cog manager is loaded seperately so that it can not be
         # unloaded because it is used to unload other cogs.
         cog_manager = CogManager(self)

@@ -8,7 +8,6 @@ from discord import app_commands, Interaction as Inter
 
 log = logging.getLogger(__name__)
 
-
 async def get_member(interaction: discord.Interaction, member: str):
     """Convert a username or user id into a discord.Member
     object and return it.
@@ -19,7 +18,7 @@ async def get_member(interaction: discord.Interaction, member: str):
     """
 
     guild = interaction.guild
-    
+
     # If the member is digits, it's likely a user id
     if member.isdigit():
         return guild.get_member(int(member))
@@ -67,3 +66,4 @@ def normalized_name(member:discord.Member, with_id:bool=True) -> str:
 
     output = f'{member.name}#{member.discriminator}'
     return output if not with_id else f'{output} ({member.id})'
+
