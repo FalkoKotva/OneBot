@@ -265,10 +265,9 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
     # Admin birthday commands are in this group
     admin_group = app_commands.Group(
-        parent=group,
-        name='admin',
+        name='birthday-admin',
         description='Admin birthday commands',
-        default_permissions=discord.Permissions(administrator=True)
+        default_permissions=discord.Permissions(moderate_members=True)
     )
 
     @admin_group.command(name='savefor')
