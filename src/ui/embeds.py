@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime
+
 import discord
 from discord import Interaction as Inter
 from tabulate import tabulate
@@ -9,15 +10,103 @@ from num2words import num2words
 
 from utils import normalized_name
 from constants import BDAY_HELP_MSG
+from .views import EmbedPageView
 
 
 log = logging.getLogger(__name__)
+
+
+class EmbedPageManager:
+    """An object to manage multiple embeds in a single message"""
+
+    # The last interaction that sent the message
+    _last_inter: Inter = None
+
+    # A list of embeds under this manager, each embed is a page
+    _embeds = []
+
+    # Properties
+    current_page = 0
+
+    @property
+    def pages(self):
+        """Get the number of embeds in this manager
+
+        Returns:
+            int: The number of embeds
+        """
+
+        return len(self._embeds)
+
+    def add_embed(self, embed:discord.Embed):
+        """Add an embed to the message
+
+        Args:
+            embed (discord.Embed): The embed to add
+        """
+
+        # Add the page number to the description of the embed
+        embed.description += f'\n\n**Page {self.pages + 1}**'
+
+        # Now we can save the embed
+        self._embeds.append(embed)
+
+    def add_embeds(self, *embeds):
+        """Add multiple embeds to the message
+
+        Args:
+            *embeds (discord.Embed): The embeds to add
+        """
+
+        log.debug('Adding %s embeds', len(embeds))
+
+        # Just add them as we would a single embed
+        for embed in embeds:
+            self.add_embed(embed)
+
+    def get_embed(self, index:int):
+        """Get an embed from the message
+
+        Args:
+            index (int): The index of the embed
+        """
+
+        log.debug('Getting embed at index: %s', index)
+        return self._embeds[index]
+
+    async def send(self, inter:Inter):
+        """Send the message
+
+        Args:
+            inter (Inter): The interaction to send the message to
+        """
+
+        # Delete the last page, if it exists
+        if self._last_inter:
+            await self._last_inter.delete_original_response()
+
+        # Create the user controls
+        view = EmbedPageView(self)
+        await view.update_buttons(inter)
+
+        # Send the new page
+        await inter.response.send_message(
+            embed=self.get_embed(self.current_page),
+            ephemeral=False,  # IMPORTANT
+            view=view
+        )
+
+        # Save the interaction so we can delete it later if the
+        # member changes page
+        self._last_inter = inter
 
 
 class HelpChannelsEmbed(discord.Embed):
     """Embed to list channels and their descriptions"""
 
     def __init__(self, channels:list[discord.TextChannel]):
+
+        log.debug('Initializing %s', self.__class__.__name__)
 
         # A shorthand for the guild
         guild = channels[0].guild
@@ -28,17 +117,39 @@ class HelpChannelsEmbed(discord.Embed):
             colour=discord.Colour.gold(),
         )
 
-        # Get all of the channels and topics into lists
-        channel_names, channel_topics = [], []
-        for channel in channels:
-            if not isinstance(channel, discord.TextChannel):
-                continue
+        # Sometimes the channels list may be a different type
+        channels = list(channels)
 
+        # Do not go any further if there are no channels
+        if not channels:
+            log.warning('No channels found, returning early')
+            return
+
+        log.debug('Formatting channels')
+
+        # We need the names/topics for separate columns
+        channel_names, channel_topics = [], []
+
+        for channel in channels:
+
+            # We only want to show text channels
+            if not isinstance(channel, discord.TextChannel):
+                raise ValueError(f'Invalid channel type: {type(channel)}')
+
+            # Prevent really long topics from breaking the embed
             if len(str(channel.topic)) > 60:
                 channel.topic = channel.topic[:56] + ' ...'
 
+            # Add the channel name and topic to the columns
             channel_names.append(channel.mention)
             channel_topics.append(channel.topic or '\u200b')
+
+        log.debug('Formatted %s channels', len(channel_names))
+
+        # The column sizes must match to display the embed correctly
+        assert len(channel_names) == len(channel_topics)
+
+        log.debug('Adding fields')
 
         # Display all of the channel names
         self.add_field(
@@ -52,6 +163,8 @@ class HelpChannelsEmbed(discord.Embed):
             value='\n'.join(channel_topics)
         )
 
+        log.debug('Adding footer')
+
         # Get the guild icon url for the footer
         url = guild.icon.url if guild.icon else None
 
@@ -60,6 +173,8 @@ class HelpChannelsEmbed(discord.Embed):
             text='Use `/help` to get more help commands',
             icon_url=url
         )
+
+        log.debug('Initialized %s', self.__class__.__name__)
 
 
 class BirthdayHelpEmbed(discord.Embed):
