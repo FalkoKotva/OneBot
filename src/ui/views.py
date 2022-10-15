@@ -67,10 +67,20 @@ class EmbedPageView(discord.ui.View):
 
     @discord.ui.button(
         label='Next Page',
-        style=discord.ButtonStyle.secondary,
+        style=discord.ButtonStyle.primary,
         custom_id='next_page',
     )
     async def next_page(self, inter:Inter, _):
         """When the next page button has been pressed"""
 
         await self._btn_event(inter, self.multi_embed.current_page + 1)
+
+    @discord.ui.button(
+        label='Delete',
+        style=discord.ButtonStyle.danger,
+        custom_id='delete'
+    )
+    async def delete(self, inter:Inter, _):
+        """When the delete button has been pressed"""
+
+        await self.multi_embed.delete()

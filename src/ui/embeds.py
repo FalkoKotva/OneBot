@@ -74,6 +74,11 @@ class EmbedPageManager:
         log.debug('Getting embed at index: %s', index)
         return self._embeds[index]
 
+    async def delete(self):
+        """Delete the message"""
+
+        await self._last_inter.delete_original_response()
+
     async def send(self, inter:Inter):
         """Send the message
 
@@ -136,9 +141,11 @@ class HelpChannelsEmbed(discord.Embed):
             if not isinstance(channel, discord.TextChannel):
                 raise ValueError(f'Invalid channel type: {type(channel)}')
 
+            topic_limit = 55 - len(channel.mention)
+
             # Prevent really long topics from breaking the embed
-            if len(str(channel.topic)) > 60:
-                channel.topic = channel.topic[:56] + ' ...'
+            if len(str(channel.topic)) > topic_limit:
+                channel.topic = channel.topic[:topic_limit-3] + '...'
 
             # Add the channel name and topic to the columns
             channel_names.append(channel.mention)
