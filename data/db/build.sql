@@ -24,3 +24,8 @@ CREATE TABLE IF NOT EXISTS user_suggestion_tickets (
     channel_id INTEGER,
     suggestion_msg TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS member_levels (
+    member_id INTEGER PRIMARY KEY,
+    experience INTEGER NOT NULL DEFAULT 1
+);
