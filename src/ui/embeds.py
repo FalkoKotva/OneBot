@@ -16,6 +16,29 @@ from .views import EmbedPageView
 log = logging.getLogger(__name__)
 
 
+class ClaimedExpClusterEmbed(discord.Embed):
+    """Embed for when a user claims an exp cluster"""
+
+    def __init__(self, member:discord.Member, amount:int):
+        super().__init__(
+            title='XP Cluster - Claimed!',
+            description=f'{member.mention} claimed a cluster of {amount} XP!',
+            color=discord.Color.green()
+        )
+
+
+class ExpClusterEmbed(discord.Embed):
+    """Embed for EXP clusters"""
+
+    def __init__(self, amount:int):
+
+        super().__init__(
+            title='An XP Cluster has appeared!',
+            description=f'Hurry, press the claim button to recieve {amount} XP!',
+            color=discord.Color.gold()
+        )
+
+
 class EmbedPageManager:
     """An object to manage multiple embeds in a single message"""
 

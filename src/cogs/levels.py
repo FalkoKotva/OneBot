@@ -1,16 +1,17 @@
 """Level progression cog"""
 
-from math import sqrt, ceil
 import logging
 import sqlite3
+from typing import Tuple
+from math import sqrt, ceil
 
 import discord
 from discord import app_commands
 from discord import Interaction as Inter
-from easy_pil import Editor, Canvas, load_image_async, Font
+from discord.ext import commands
 
 from db import db
-from utils import normalized_name
+from ui import get_levelboard
 from . import BaseCog
 
 
@@ -20,73 +21,32 @@ log = logging.getLogger(__name__)
 class LevelCog(BaseCog, name='Level Progression'):
     """Level progression cog"""
 
-    async def get_levelboard(self, member:discord.Member, level:int, exp:int, next_exp:int):
-        """Returns a levelboard for the given member"""
+    async def get_level_for(
+        self, member:discord.Member
+    ) -> Tuple[float, float, float, int]:
+        """Get level data for the given member
 
-        accent = member.colour.to_rgb()
+        Args:
+            member (discord.Member): _description_
 
-        background = Editor(Canvas((900, 210), color="#141414"))
-        background.rounded_corners(10)
-        avatar_img = await load_image_async(member.avatar.url)
-        avatar_outline = Editor(Canvas((170, 170), color="#141414")).circle_image()
-        avatar = Editor(avatar_img).resize((150, 150)).circle_image()
-
-        poppins = Font.poppins(size=40)
-        poppins_small = Font.poppins(size=30)
-
-        background.polygon(
-            ((50, 0), (0, 50), (90, 90), (180, 0)),
-            fill=accent,
-        )
-        background.polygon(
-            ((0, 50), (50, 0), (90, 90), (0, 180)),
-            fill=accent,
-        )
-        background.rectangle((0, 0), width=100, height=100, fill=accent, radius=10)
-        background.paste(avatar_outline, (20, 20))
-        background.paste(avatar, (30, 30))
-
-        background.rectangle((210, 140), width=660, height=40, color="#2F2F2F", radius=20)
-        background.bar(
-            (210, 140), max_width=660, height=40, color=accent,
-            radius=20, percentage=(exp / next_exp) * 100
-        )
-        background.text(
-            (210, 90), normalized_name(member, False), font=poppins, color="#F5F5F5"
-        )
-
-        background.text(
-            (870, 40),
-            text=f"LEVEL {level}",
-            font=poppins,
-            color=accent,
-            align="right"
-        )
-        background.text(
-            (870, 90),
-            f"{exp} / {next_exp} XP",
-            font=poppins_small,
-            color="#F5F5F5",
-            align='right'
-        )
-
-        return discord.File(fp=background.image_bytes, filename="levelboard.png")
-
-    async def get_rank_for(self, member:discord.Member):
+        Returns:
+            Tuple[float, float, float, int]: The lvl data for the member
+        """
 
         # Get their data from the database
-        data = db.record(
-            "SELECT * FROM member_levels WHERE member_id = ?",
-            member.id
-        )
+        data = db.records("SELECT * FROM member_levels")
 
-        # We can't continue if they aren't in the database.
+        # We can't continue if there is no data
         if not data:
             return
 
-        # Get the exp
-        _, exp = data
+        data = sorted(data, key=lambda x: x[2], reverse=True)
+        for rank, record in enumerate(data):
+            if record[0] == member.id:
+                break
 
+        # Get the exp
+        _, _, exp = record  # pylint: disable=undefined-loop-variable
         # Calculate the current level
         level = 0.07 * sqrt(exp)
         log.debug('Calculated level for %s to be %s', member, level)
@@ -95,8 +55,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         next_exp = (ceil(level) / 0.07) ** 2
         log.debug('Calculated next level exp for %s to be %s', member, next_exp)
 
-        levelboard = await self.get_levelboard(member, level, exp, next_exp)
-        return levelboard, level, exp, next_exp
+        return level, exp, next_exp, rank + 1  # # pylint: disable=undefined-loop-variable
 
     async def gain_exp(self, member:discord.Member, amount:int):
         """Gives the given member the given amount of exp"""
@@ -117,122 +76,121 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             return
 
-        exp = data[1] + amount
+        exp = data[2] + amount
 
         db.execute(
             "UPDATE member_levels SET experience = ? " \
             "WHERE member_id = ?",
             exp, member.id
         )
+        db.commit()
 
         log.debug('Updated exp for %s to %s', member, exp)
 
         return exp
 
-    group = app_commands.Group(
-        name='rank',
-        description='Level progression commands',
-    )
+    @commands.Cog.listener()
+    async def on_message(self, message:discord.Message):
+        """On message event.
 
-    @group.command(name='addexp')
-    async def setexp(self, inter:Inter, member:discord.Member, exp:int):
-        """Sets the given member's experience"""
+        Args:
+            message (discord.Message): The discord msg object
+        """
 
-        new_exp = await self.gain_exp(member, exp)
-        await inter.response.send_message(
-            f"Your exp has been updated to {new_exp}",
-            ephemeral=True
-        )
+        log.debug("Message event triggered by %s", message.author)
 
-    @group.command(name='track')
-    async def add_to_db(self, inter:Inter, member:discord.Member):
-        """Adds the member to the database"""
+        if message.author.bot:
+            log.debug("Message author is a bot, ignoring")
+            return
 
-        log.debug('Adding %s to database', member)
+        await self.gain_exp(message.author, 20)
+
+    @commands.Cog.listener(name="on_member_join")
+    async def register_new_member(self, member:discord.Member):
+        """Register a new member in the database
+
+        Args:
+            member (discord.Member): The member to register
+        """
+
+        log.debug("Registering new member %s", member)
+
+        if member.bot:
+            log.debug("Member is a bot, not registering")
+            return
 
         try:
             db.execute(
-                "INSERT INTO member_levels VALUES (?, ?)",
-                member.id, 1
+                "INSERT INTO member_levels(member_id, guild_id) VALUES(?, ?)",
+                member.id, member.guild.id
             )
             db.commit()
-        except sqlite3.IntegrityError as err:
-            print(err)
-            await inter.response.send_message(
-                'Their levels are already being tracked',
-                ephemeral=True
-            )
+        except sqlite3.IntegrityError:
+            log.debug("Member %s is already in the database", member)
             return
 
+        log.debug("Completed registration")
+
+    admin_group = app_commands.Group(
+        name='rank-admin',
+        description='Admin commands for the rank system'
+    )
+
+    @admin_group.command(name="validate-members")
+    async def validate_members(self, inter:Inter):
+        """Validate that all of the guild members are in the ranking
+        database.
+        """
+
+        for member in inter.guild.members:
+            await self.register_new_member(member)
+
         await inter.response.send_message(
-            "Their levels are now being tracked!\n" \
-            "You can check your level with `/rank member`",
+            "Validation Complete!",
             ephemeral=True
         )
 
-    @group.command(name='untrack')
-    async def remove_from_db(self, inter:Inter, member:discord.Member):
-        """Removes the member from the database"""
+    group = app_commands.Group(
+        name='rank',
+        description='Commands for the rank system',
+    )
 
-        log.debug('Removing %s from database', member)
+    @group.command(name='see')
+    @app_commands.describe(
+        member="The member to see the rank of",
+        ephemeral="Hide the bot response from other users"
+    )
+    @app_commands.describe(member="The member to see the level of")
+    async def see_member_levelboard(
+        self,
+        inter:Inter,
+        member:discord.Member=None,
+        ephemeral:bool=False
+    ):
+        """Get your current levelboard"""
 
-        db.execute(
-            "DELETE FROM member_levels WHERE member_id = ?",
-            member.id
-        )
-        db.commit()
+        member = member or inter.user
 
-        await inter.response.send_message(
-            "Their levels are no longer being tracked!",
-            ephemeral=True
-        )
+        log.debug('%s is checking the rank of %s', inter.user, member)
 
-    @group.command(name='me')
-    async def get_own_levelboard(self, inter:Inter):
-        """Get your current rank"""
-
-        log.debug('%s is checking their rank', inter.user)
-
-        data = await self.get_rank_for(inter.user)
+        data = await self.get_level_for(member)
         if not data:
             await inter.response.send_message(
                 "Your levels are not being tracked, " \
-                "use `/rank track` to start tracking them",
+                "contact an administrator",
                 ephemeral=True
             )
             return
 
-        levelboard, level, exp, next_exp = data
+        level, exp, next_exp, rank = data
 
         # Get the levelboard
-        levelboard = await self.get_levelboard(inter.user, int(level), int(exp), int(next_exp))
-        await inter.response.send_message(
-            file=levelboard,
-            ephemeral=True
+        levelboard = await get_levelboard(
+            member, int(level), int(exp), int(next_exp), rank
         )
-        levelboard.close()
-
-    @group.command(name='member')
-    async def get_other_levelboard(self, inter:Inter, member:discord.Member):
-        """Get another member's rank"""
-
-        log.debug('%s is checking their rank', member)
-
-        data = await self.get_rank_for(member)
-        if not data:
-            await inter.response.send_message(
-                "Their levels are not being tracked",
-                ephemeral=True
-            )
-            return
-
-        levelboard, level, exp, next_exp = data
-
-        # Get the levelboard
-        levelboard = await self.get_levelboard(member, int(level), int(exp), int(next_exp))
         await inter.response.send_message(
             file=levelboard,
-            ephemeral=True
+            ephemeral=ephemeral
         )
         levelboard.close()
 

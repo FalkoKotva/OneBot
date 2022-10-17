@@ -42,3 +42,17 @@ class Get:
         log.debug('Getting channel object')
         channel_obj = self.bot.get_channel(_id)
         return channel_obj or await self.bot.fetch_channel(_id)
+
+    async def member(self, _id, /) -> discord.Member | None:
+        """Get a discord member object from an ID.
+
+        Args:
+            id (int): The ID of the member.
+        Returns:
+            discord.Member: The member object.
+            None: If the member is not found.
+        """
+
+        log.debug('Getting member object')
+        member_obj = self.bot.get_user(_id)
+        return member_obj or await self.bot.fetch_user(_id)

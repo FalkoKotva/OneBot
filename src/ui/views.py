@@ -1,12 +1,42 @@
 """Views for the bot"""
 
 import logging
+from typing import Coroutine
 
 import discord
 from discord import Interaction as Inter
 
 
 log = logging.getLogger(__name__)
+
+
+class ExpClusterView(discord.ui.View):
+    """Controls for the cluster embed"""
+
+    _original_message: discord.Message = None
+
+    def __init__(self, claim_func:Coroutine):
+        super().__init__(timeout=None)
+        self._claim_func = claim_func
+
+    def set_original_msg(self, msg:discord.Message):
+        """Set the original message of the view
+
+        Args:
+            msg (discord.Message): The original message
+        """
+
+        self._original_message = msg
+
+    @discord.ui.button(
+        label='Claim!',
+        style=discord.ButtonStyle.green
+    )
+    async def on_claim(self, inter:Inter, _):
+        """Button for claiming the exp cluster"""
+
+        await self._claim_func(inter)
+        await self._original_message.delete()
 
 
 class EmbedPageView(discord.ui.View):
