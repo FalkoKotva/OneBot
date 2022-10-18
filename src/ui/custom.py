@@ -1,6 +1,7 @@
 """Custom ui for the bot"""
 
 import logging
+import textwrap
 
 from discord import Status, Colour, Member, File
 from easy_pil import (
@@ -11,6 +12,7 @@ from easy_pil import (
     load_image_async
 )
 from PIL.Image import ANTIALIAS
+from utils import abbreviate_num
 
 
 log = logging.getLogger(__name__)
@@ -23,24 +25,25 @@ def get_status_colour(status:Status) -> Colour:
 
     Returns:
         discord.Colour: The colour that corresponds to the given
-        status
     """
 
     log.debug("Getting colour for status %s", status)
 
     match status:
         case Status.online:
-            return Colour.green()
+            colour = Colour.green()
         case Status.idle:
-            return Colour.yellow()
+            colour = Colour.dark_gold()
         case Status.dnd:
-            return Colour.red()
+            colour = Colour.red()
         case Status.offline:
-            return Colour.light_grey()
+            colour = Colour.light_grey()
         case Status.invisible:
-            return Colour.blue()
+            colour = Colour.blurple()
         case _:
-            return Colour.blurple()
+            colour = Colour.blurple()
+
+    return colour
 
 async def get_levelboard(
     member:Member,
@@ -66,8 +69,9 @@ async def get_levelboard(
         member, level, exp, next_exp, rank
     )
 
+    # TODO: Redefine as constants
     # Define the colours
-    bg1_colour = "#141414"  # black
+    bg1_colour = "#0F0F0F"  # black
     bg2_colour = "#2F2F2F"  # dark grey
     fg1_colour = "#F9F9F9"  # white
     fg2_colour = "#9F9F9F"  # light grey
@@ -75,23 +79,23 @@ async def get_levelboard(
     status_colour = get_status_colour(member.status).to_rgb()
 
     # Define the fonts
-    poppins = Font.poppins(size=80)
-    poppins_small = Font.poppins(size=60)
+    poppins = Font.poppins(size=70)
+    poppins_small = Font.poppins(size=50)
 
     log.debug("Drawing levelboard background")
 
     # Create the levelboard
-    levelboard = Editor(Canvas((1800, 420), color=bg1_colour))
+    levelboard = Editor(Canvas((1800, 400), color=bg1_colour))
     levelboard.rounded_corners(20)
 
     log.debug("Drawing the avatar")
 
     # Create the avatar image
-    avatar_outline = Editor(Canvas((340, 340), color=bg1_colour)).circle_image()
-    avatar_img = await load_image_async(member.avatar.url)
+    avatar_outline = Editor(Canvas((320, 320), color=bg1_colour)).circle_image()
+    avatar_img = await load_image_async(member.display_avatar.url)
     avatar = avatar_outline.paste(
         Editor(avatar_img).resize((300, 300)).circle_image(),
-        (20, 20)
+        (10, 10)
     )
 
     log.debug("Drawing accent polygon behind avatar")
@@ -125,11 +129,38 @@ async def get_levelboard(
     log.debug("Drawing the status indicator")
 
     # Create a status indicator to go over the avatar
-    status_outline = Editor(Canvas((110, 110), color=bg1_colour)).circle_image()
-    status = status_outline.paste(
-        Editor(Canvas((70, 70), color=status_colour)).circle_image(),
-        (20, 20)
-    )
+    status_outline = Editor(Canvas((90, 90), color=bg1_colour)).circle_image()
+    status_icon = Editor(Canvas((70, 70), color=status_colour)).circle_image()
+
+    match member.status:
+        case Status.idle:
+            # Draw the idle icon (MOON)
+            status_icon.paste(
+                Editor(Canvas(
+                    (50, 50), color=bg1_colour
+                    )
+                ).circle_image(),
+                (-5, 0)
+            )
+        case Status.dnd:
+            # Draw the dnd icon (STOP SIGN)
+            status_icon.rectangle(
+                (10, 29), width=50, height=12,
+                fill=bg1_colour, radius=15
+            )
+        case Status.offline:
+            # Draw the offline icon (CIRCLE IN CIRCLE)
+            status_icon.paste(
+                Editor(Canvas(
+                    (40, 40), color=bg1_colour
+                    )
+                ).circle_image(),
+                (15, 15)
+            )
+        case _:
+            pass
+
+    status = status_outline.paste(status_icon, (10, 10))
 
     log.debug("Pasting the status indicator")
 
@@ -140,32 +171,42 @@ async def get_levelboard(
 
     # The percentage of the way to the next level
     percentage = (exp / next_exp) * 100
-    percentage = max(percentage, 10)  # less than 10 causes visual issues
+    percentage = max(percentage, 5)  # less than 10 causes visual issues
 
     # Create the experience bar
     levelboard.rectangle(
-        (420, 280), width=1320, height=80, color=bg2_colour, radius=40
+        (420, 275), width=1320, height=60, color=bg2_colour, radius=40
     )
     levelboard.bar(
-        (420, 280), max_width=1320, height=80, color=accent_colour,
+        (420, 275), max_width=1320, height=60, color=accent_colour,
         radius=40, percentage=percentage
     )
 
     log.debug("Drawing the name text")
 
+    # Prevent the display name from being too long
+    name = member.display_name
+    discriminator = f"#{member.discriminator}"
+    if len(name) > 15:
+        name = name[:15]
+
     # Add the member's name to the levelboard
     name_texts = (
-        Text(member.display_name, font=poppins, color=fg1_colour),
-        Text(f'#{member.discriminator}', font=poppins_small, color=fg2_colour)
+        Text(name, font=poppins, color=fg1_colour),
+        Text(discriminator, font=poppins_small, color=fg2_colour)
     )
     levelboard.multi_text((420, 220), texts=name_texts)
 
     log.debug("Drawing the exp/next_exp text")
 
+    # Abbreviate the exp and next_exp
+    display_exp = abbreviate_num(exp)
+    display_next_exp = f"/ {abbreviate_num(next_exp)} XP"
+
     # Add the member's experience count to the levelboard
     exp_texts = (
-        Text(str(exp), font=poppins_small, color=fg1_colour),
-        Text(f"/ {next_exp} XP", font=poppins_small, color=fg2_colour)
+        Text(display_exp, font=poppins_small, color=fg1_colour),
+        Text(display_next_exp, font=poppins_small, color=fg2_colour)
     )
     levelboard.multi_text((1740, 225), texts=exp_texts, align="right")
 
@@ -174,11 +215,18 @@ async def get_levelboard(
     # Add the member's level and rank to the levelboard
     level_texts = (
         Text("RANK", font=poppins_small, color=fg2_colour),
-        Text(f"#{rank} ", font=poppins, color=fg1_colour),
+        Text(f"#{rank} ", font=poppins, color=accent_colour),
         Text("LEVEL", font=poppins_small, color=fg2_colour),
-        Text(str(level+1), font=poppins, color=fg1_colour)
+        Text(str(level+1), font=poppins, color=accent_colour)
     )
     levelboard.multi_text((1700, 80), texts=level_texts, align="right")
+
+    # log.debug("Creating a border for the levelboard")
+
+    # # Create the boarder for the levelboard
+    # border = Editor(Canvas((1820, 420), color=bg2_colour))
+    # border.rounded_corners(20)
+    # levelboard = border.paste(levelboard, (10, 10))
 
     log.debug("Antialiasing the levelboard")
 
@@ -190,4 +238,7 @@ async def get_levelboard(
 
     log.debug("Done, returning the levelboard!")
 
-    return File(fp=levelboard.image_bytes, filename="levelboard.png")
+    return File(
+        fp=levelboard.image_bytes,
+        filename=f"{member.display_name.lower()}_levelboard.png"
+    )

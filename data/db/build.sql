@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS user_suggestion_tickets (
 );
 
 CREATE TABLE IF NOT EXISTS member_levels (
-    member_id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
     guild_id INTEGER NOT NULL,
     experience INTEGER NOT NULL DEFAULT 1
 );

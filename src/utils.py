@@ -2,6 +2,8 @@
 
 import os
 import logging
+from math import floor, log as mlog
+
 import discord
 from discord import app_commands, Interaction as Inter
 
@@ -73,3 +75,20 @@ def normalized_name(member:discord.Member, with_id:bool=True) -> str:
     output = f'{member.name}#{member.discriminator}'
     return output if not with_id else f'{output} ({member.id})'
 
+def abbreviate_num(num:float) -> str:
+    """Abbreviates a number to a string with the appropriate suffix
+
+    Args:
+        num (float): The number to abbreviate.
+
+    Returns:
+        str: The abbreviated number.
+    """
+
+    if num < 1000:
+        return str(num)
+
+    out = int(floor(mlog(num, 1000)))
+    suffixes = 'KMBT'
+    suffix = suffixes[out - 1]
+    return f'{num / 1000 ** out:.2f}{suffix}'
