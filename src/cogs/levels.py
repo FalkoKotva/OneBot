@@ -197,10 +197,6 @@ class LevelCog(BaseCog, name='Level Progression'):
     ):
         """Get your current levelboard"""
 
-        # Defer the message incase the command takes a while
-        # to draw the card image
-        await inter.response.defer(ephemeral=ephemeral)
-
         # Default to the command author if no member is given
         member = member or inter.user
 
@@ -211,7 +207,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         # We can't continue if there is no data
         if not level_data:
-            await inter.followup.send(
+            await inter.response.send_message(
                 "Your levels are not being tracked, " \
                 "contact an administrator",
                 ephemeral=True
@@ -241,7 +237,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         await levelcard.draw()
 
         # All done! Send the card as a file.
-        await inter.followup.send(
+        await inter.response.send_message(
             file=levelcard.get_file(),
             ephemeral=ephemeral
         )
