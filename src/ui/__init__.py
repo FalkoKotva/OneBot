@@ -11,4 +11,4 @@ from .embeds import (
     ClaimedExpClusterEmbed
 )
 from .views import EmbedPageView, ExpClusterView
-from .custom import get_levelboard
+from .levelcards import LevelCard

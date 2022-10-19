@@ -1,7 +1,6 @@
 """Level progression cog"""
 
 import logging
-import sqlite3
 from typing import Tuple
 from math import sqrt, ceil
 
@@ -11,7 +10,7 @@ from discord import Interaction as Inter
 from discord.ext import commands
 
 from db import db
-from ui import get_levelboard
+from ui import LevelCard
 from . import BaseCog
 
 
@@ -205,33 +204,54 @@ class LevelCog(BaseCog, name='Level Progression'):
     ):
         """Get your current levelboard"""
 
+        # Defer the message incase the command takes a while
+        # to draw the card image
+        await inter.response.defer(ephemeral=ephemeral)
+
+        # Default to the command author if no member is given
         member = member or inter.user
 
         log.debug('%s is checking the rank of %s', inter.user, member)
 
+        # Get the level data for the member
         level_data = await self.get_level_for(member)
+
+        # We can't continue if there is no data
         if not level_data:
-            await inter.response.send_message(
+            await inter.followup.send(
                 "Your levels are not being tracked, " \
                 "contact an administrator",
                 ephemeral=True
             )
             return
 
+        # Unpack the level data
         level, exp, next_exp, rank = level_data
 
+        # We need to get the member again because the member object
+        # provided by the app command does not contain the member's
+        # status, which we need to draw the card.
         guild = await self.bot.get.guild(inter.guild.id)
         member = guild.get_member(member.id)
 
-        # Get the levelboard
-        levelboard = await get_levelboard(
-            member, int(level), int(exp), int(next_exp), rank
+        # Create the level card
+        levelcard = LevelCard(
+            member=member,
+            level=int(level),
+            exp=int(exp),
+            next_exp=int(next_exp),
+            rank=rank,
+            is_darkmode=True
         )
-        await inter.response.send_message(
-            file=levelboard,
+
+        # Draw the card
+        await levelcard.draw()
+
+        # All done! Send the card as a file.
+        await inter.followup.send(
+            file=levelcard.get_file(),
             ephemeral=ephemeral
         )
-        levelboard.close()
 
     # Admin only commands belong to this group
     admin_group = app_commands.Group(

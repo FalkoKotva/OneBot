@@ -1,5 +1,7 @@
 """This file contains all the constants used in the bot."""
 
+from easy_pil import Font
+
 # Bot constants
 ACTIVITY_MSG = 'I am up and running!'
 DATE_FORMAT = '%d/%m/%Y'
@@ -17,6 +19,12 @@ LOGS = 'logs/'
 LOG_FILENAME_FORMAT_PREFIX = '%Y-%m-%d %H-%M-%S'
 MAX_LOGFILE_AGE_DAYS = 7
 
-# Member Profile Card Constants
-AVATAR_SIZE = (150, 150)
-BANNER_SIZE = (401, 116)
+# Levelboard constants
+# colours
+BLACK = "#0F0F0F"
+WHITE = "#F9F9F9"
+DARK_GREY = "#2F2F2F"
+LIGHT_GREY = "#9F9F9F"
+#fonts
+POPPINS = Font.poppins(size=70)
+POPPINS_SMALL = Font.poppins(size=50)
