@@ -184,18 +184,11 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Validated %s members", i)
 
-    # Standard commands accessible to all users belong to this group
-    group = app_commands.Group(
-        name='rank',
-        description='Commands for the rank system',
-    )
-
-    @group.command(name='see')
+    @app_commands.command(name='rank')
     @app_commands.describe(
         member="The member to see the rank of",
         ephemeral="Hide the bot response from other users"
     )
-    @app_commands.describe(member="The member to see the level of")
     async def see_member_levelboard(
         self,
         inter:Inter,
@@ -268,23 +261,6 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         await inter.response.send_message(
             "Validation Complete!",
-            ephemeral=True
-        )
-
-    @admin_group.command(name="getexp")
-    async def add_exp_to_member(
-        self,
-        inter:Inter,
-        member:discord.Member,
-        amount:int
-    ):
-        """Add exp to yourself"""
-
-        member = member or inter.user
-        await self.gain_exp(member, amount)
-
-        await inter.response.send_message(
-            f"Added {amount} exp to that member!",
             ephemeral=True
         )
 
