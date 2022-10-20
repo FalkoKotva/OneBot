@@ -9,7 +9,7 @@ from easy_pil import (
     Text,
     load_image_async
 )
-from PIL.Image import ANTIALIAS
+from PIL import Image
 from utils import abbreviate_num
 from constants import (
     WHITE,
@@ -181,10 +181,15 @@ class LevelCard:
          self._background_2,
          self._foreground_1,
          self._foreground_2) = get_colours(self.is_darkmode)
-        self._accent_colour = self.member.colour.to_rgb()
         self._status_colour = get_status_colour(
             self.member.status
         ).to_rgb()
+
+        # The default colour is black which is not very nice, don't use it
+        if self.member.colour == Colour.default():
+            self._accent_colour = Colour.random().to_rgb()
+        else:
+            self._accent_colour = self.member.colour.to_rgb()
 
     def _draw_accent_polygon(self):
         """Draw the accent colour polygon on the card"""
@@ -200,6 +205,9 @@ class LevelCard:
             ),
             fill=self._accent_colour
         )
+
+        # This rectangle is drawn in the top left corner of the card
+        # to round off the corners of the accent polygon
         self.card.rectangle(
             (2, 2),
             width=115,
@@ -280,21 +288,27 @@ class LevelCard:
         percentage = (self.exp / self.next_exp) * 100
         percentage = max(percentage, 5)  # <10 causes visual issues
 
+        # Bar dimensions
+        position = (420, 275)
+        width = 1320
+        height = 60
+        radius = 40
+
         # The trough for the bar background
         self.card.rectangle(
-            (420, 275),
-            width=1320, height=60,
+            position=position,
+            width=width, height=height,
             color=self._background_2,
-            radius=40
+            radius=radius
         )
 
         # The bar itself, dynamically changes based on the member's xp
         self.card.bar(
-            (420, 275),
-            max_width=1320, height=60,
+            position=position,
+            max_width=width, height=height,
             color=self._accent_colour,
             percentage=percentage,
-            radius=40
+            radius=radius
         )
 
     def _draw_name(self):
@@ -304,7 +318,7 @@ class LevelCard:
 
         # Shorthands for the name and discriminator
         name = self.member.display_name
-        discriminator = self.member.discriminator
+        discriminator = f"#{self.member.discriminator}"
 
         # Prevent the name text from overflowing
         if len(name) > 15:
@@ -313,7 +327,7 @@ class LevelCard:
 
         # Draw it right onto the card
         self.card.multi_text(
-            position=(420, 220),
+            position=(420, 220),  # bottom left
             texts=(
                 Text(
                     name,
@@ -333,14 +347,13 @@ class LevelCard:
 
         log.debug("Drawing exp text")
 
-        # TODO: function name typo here?
-        # Abbreaviate the exp and next exp
-        exp = abbreviate_num(self.exp - 1)
-        next_exp = f"/ {abbreviate_num(self.next_exp - 1)} XP"
+        # Abbreviate the exp and next exp
+        exp = abbreviate_num(self.exp)
+        next_exp = f"/ {abbreviate_num(self.next_exp)} XP"
 
         # Draw it right onto the card
         self.card.multi_text(
-            position=(1740, 225),
+            position=(1740, 225),  # bottom right
             align="right",
             texts=(
                 Text(
@@ -362,7 +375,7 @@ class LevelCard:
         log.debug("Drawing level and rank text")
 
         self.card.multi_text(
-            position=(1700, 80),
+            position=(1700, 80),  # top right
             align="right",
             texts=(
                 Text(
@@ -381,7 +394,7 @@ class LevelCard:
                     color=self._foreground_2
                 ),
                 Text(
-                    str(self.level+1),
+                    str(self.level),
                     font=POPPINS,
                     color=self._accent_colour
                 )
@@ -397,7 +410,7 @@ class LevelCard:
         new_size = tuple(i//2 for i in image.size)
         self.card = Editor(image.resize(
             size=new_size,
-            resample=ANTIALIAS
+            resample=Image.ANTIALIAS
         ))
 
     def get_file(self, filename:str=None) -> File:
@@ -417,3 +430,13 @@ class LevelCard:
             filename=filename,
             description=f"Level card for {self.member.name}"
         )
+
+    @property
+    def image(self) -> Image.Image:
+        """Shorthand to get the card as a PIL.Image object
+
+        Returns:
+            PIL.Image: The card as a PIL.Image
+        """
+
+        return self.card.image
