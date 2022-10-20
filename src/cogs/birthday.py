@@ -32,6 +32,13 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Start the task to check for birthdays
         self.check_birthdays.start()  # pylint: disable=no-member
 
+        # Context menu version of see cmd
+        see_menu = app_commands.ContextMenu(
+            name="See Birthday",
+            callback=self.context_see_birthday,
+        )
+        self.bot.tree.add_command(see_menu)
+
     @tasks.loop(time=time(hour=7))
     async def check_birthdays(self):
         """Check if it's anyone's birthday, if so send a message.
@@ -239,28 +246,39 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             ephemeral=True
         )
 
-    @group.command(name='see')
-    async def get_birthday(self, inter:Inter):
-        """See your birthday if it is saved."""
+    async def get_birthday(self, inter:Inter, member:discord.Member):
 
         # Get the birthday from the database that matches the member id
         data = db.record(
             "SELECT birthday FROM user_birthdays WHERE user_id = ?",
-            inter.user.id
+            member.id
         )
 
         # If the user doesn't have a birthday saved
         if not data:
             await inter.response.send_message(
-                'I don\'t know your birthday, sorry!'
-                '\nYou can save it with `/birthday save DD/MM/YYYY`',
+                'I don\'t know this birthday, sorry!'
+                '\nYou can save yours with `/birthday save`',
             )
             return
 
         # Inform the user of their saved birthday
         await inter.response.send_message(
-            f'Your birthday is on {data[0]}!'
+            f'That birthday is on {data[0]}!',
+            ephemeral=True
         )
+
+    @group.command(name='see')
+    async def get_birthday_cmd(self, inter:Inter, member:discord.Member=None):
+        """See your birthday if it is saved."""
+
+        member = member or inter.user
+        await self.get_birthday(inter, member)
+
+    async def context_see_birthday(self, inter:Inter, member:discord.Member):
+        """Context equivalent of `get_birthday_cmd`"""
+
+        await self.get_birthday(inter, member)
 
     # Admin birthday commands are in this group
     admin_group = app_commands.Group(
