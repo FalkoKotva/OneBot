@@ -335,8 +335,8 @@ class LevelCard:
 
         # TODO: function name typo here?
         # Abbreaviate the exp and next exp
-        exp = abbreviate_num(self.exp)
-        next_exp = f"/ {abbreviate_num(self.next_exp)} XP"
+        exp = abbreviate_num(self.exp - 1)
+        next_exp = f"/ {abbreviate_num(self.next_exp - 1)} XP"
 
         # Draw it right onto the card
         self.card.multi_text(

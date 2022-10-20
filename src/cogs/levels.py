@@ -184,6 +184,45 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Validated %s members", i)
 
+    @app_commands.command(name="scoreboard")
+    async def see_scoreboard(self, inter:Inter):
+        """Get a scoreboard of the top 5 members by rank"""
+
+        log.debug("Scoreboard command triggered")
+
+        # Create the embed
+        embed = discord.Embed(
+            title="Top 5 members",
+            description="The top 5 members by rank",
+            color=discord.Color.blurple()
+        )
+
+        data = [
+            (member.id,) + await self.get_level_for(member) \
+            for member in inter.guild.members
+        ]
+
+        if not data:
+            await inter.response.send_message(
+                "No users to check.",
+                ephemeral=True
+            )
+            return
+
+        data = sorted(data, key=lambda x: x[-1])
+
+        # Add the fields
+        for member_id, level, exp, next_exp, rank in data[:5]:
+            member = await self.bot.get.member(member_id)
+            embed.add_field(
+                name=f"{rank}. {member}",
+                value=f"Level: {level}\nExp: {exp}/{next_exp}",
+                inline=False
+            )
+
+        # Send the embed
+        await inter.response.send_message(embed=embed)
+
     @app_commands.command(name='rank')
     @app_commands.describe(
         member="The member to see the rank of",
