@@ -20,6 +20,16 @@ log = logging.getLogger(__name__)
 class LevelCog(BaseCog, name='Level Progression'):
     """Level progression cog"""
 
+    def __init__(self, bot):
+        super().__init__(bot=bot)
+
+        # Create the context menu for the rank cmd
+        rank_menu = app_commands.ContextMenu(
+            name="Get Rank",
+            callback=self.context_see_member_levelboard,
+        )
+        self.bot.tree.add_command(rank_menu)
+
     @commands.Cog.listener()
     async def on_ready(self):
         """Event to validate the database when cog is ready"""
@@ -31,6 +41,21 @@ class LevelCog(BaseCog, name='Level Progression'):
     async def register_new_member(self, member:discord.Member):
         """Event to add new members to the rank database"""
         self.register_member(member)
+
+    def calc_level(self, exp:float) -> float:
+        """Calculate the level from the given exp"""
+
+        return 0.07 * sqrt(exp)
+
+    def calc_exp(self, level:float) -> float:
+        """Calculate the exp for the given level"""
+
+        return (level / 0.07) ** 2
+
+    def calc_next_exp(self, level:float) -> float:
+        """Calculate the next level exp from the given level"""
+
+        return (ceil(level) / 0.07) ** 2
 
     async def get_level_for(
         self, member:discord.Member
@@ -59,18 +84,20 @@ class LevelCog(BaseCog, name='Level Progression'):
             if record[1] == member.id:
                 break
 
-        # Get the exp
-        exp = record[-1]  # pylint: disable=undefined-loop-variable
+        # pylint: disable=undefined-loop-variable
+        # ^ False-positive: if there is no data we return early
 
-        # Calculate the current level
-        level = 0.07 * sqrt(exp)
-        log.debug('Calculated level for %s to be %s', member, level)
+        # Get the level data
+        exp = record[-1]
+        level = self.calc_level(exp)
+        next_exp = self.calc_next_exp(level)
 
-        # Calculate the next level exp
-        next_exp = (ceil(level) / 0.07) ** 2
-        log.debug('Calculated next level exp for %s to be %s', member, next_exp)
-
-        return level, exp, next_exp, rank + 1  # pylint: disable=undefined-loop-variable
+        return (
+            level + 1,  # Otherwise lvl calculation is 1 behind
+            exp - 1,  # Otherwise exp calculation is 1 ahead
+            next_exp - 1,  # Otherwise next_exp calculation is 1 ahead
+            rank + 1  # Otherwise rank calculation is 1 behind
+        )
 
     async def gain_exp(self, member:discord.Member, amount:int):
         """Gives the given member the given amount of exp"""
@@ -168,7 +195,6 @@ class LevelCog(BaseCog, name='Level Progression'):
         )
         db.commit()
 
-
         log.debug("Completed registration")
 
     async def validate_members(self):
@@ -223,23 +249,23 @@ class LevelCog(BaseCog, name='Level Progression'):
         # Send the embed
         await inter.response.send_message(embed=embed)
 
-    @app_commands.command(name='rank')
-    @app_commands.describe(
-        member="The member to see the rank of",
-        ephemeral="Hide the bot response from other users"
-    )
-    async def see_member_levelboard(
+    async def send_levelboard(
         self,
         inter:Inter,
-        member:discord.Member=None,
-        ephemeral:bool=False
-    ):
-        """Get your current levelboard"""
-
-        # Default to the command author if no member is given
-        member = member or inter.user
+        member:discord.Member,
+        ephemeral:bool
+    ) -> None:
+        """Responds to the given interaction with the levelboard"""
 
         log.debug('%s is checking the rank of %s', inter.user, member)
+
+        if member.bot:
+            log.debug("Member is a bot, not sending levelboard")
+            await inter.response.send_message(
+                f"Sorry, {member.display_name} is a bot and can't have a rank!",
+                ephemeral=ephemeral
+            )
+            return
 
         # Get the level data for the member
         level_data = await self.get_level_for(member)
@@ -280,6 +306,28 @@ class LevelCog(BaseCog, name='Level Progression'):
             file=levelcard.get_file(),
             ephemeral=ephemeral
         )
+
+    @app_commands.command(name='rank')
+    @app_commands.describe(
+        member="The member to see the rank of",
+        ephemeral="Hide the bot response from other users"
+    )
+    async def see_member_levelboard(
+        self,
+        inter:Inter,
+        member:discord.Member=None,
+        ephemeral:bool=False
+    ):
+        """Get the levelboard of a server member"""
+
+        # Default to the command author if no member is given
+        member = member or inter.user
+        await self.send_levelboard(inter, member, ephemeral)
+
+    async def context_see_member_levelboard(self, inter:Inter, member:discord.Member):
+        """Context menu version of see_member_levelboard"""
+
+        await self.send_levelboard(inter, member, ephemeral=True)
 
     # Admin only commands belong to this group
     admin_group = app_commands.Group(
