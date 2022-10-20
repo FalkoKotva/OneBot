@@ -259,9 +259,11 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug('%s is checking the rank of %s', inter.user, member)
 
+        await inter.response.defer()
+
         if member.bot:
             log.debug("Member is a bot, not sending levelboard")
-            await inter.response.send_message(
+            await inter.followup.send(
                 f"Sorry, {member.display_name} is a bot and can't have a rank!",
                 ephemeral=ephemeral
             )
@@ -272,7 +274,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         # We can't continue if there is no data
         if not level_data:
-            await inter.response.send_message(
+            await inter.followup.send(
                 "Your levels are not being tracked, " \
                 "contact an administrator",
                 ephemeral=True
@@ -302,7 +304,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         await levelcard.draw()
 
         # All done! Send the card as a file.
-        await inter.response.send_message(
+        await inter.followup.send(
             file=levelcard.get_file(),
             ephemeral=ephemeral
         )
