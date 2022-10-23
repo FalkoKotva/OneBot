@@ -118,18 +118,22 @@ class Bot(commands.Bot):
         # Create a discord file object
         file = discord.File(self.log_filepath, filename=filename)
 
-        log_channel_id = self.config['guild']['channel_ids']['logs']
-
-        # Send the log file to the logs channel
-        log_channel = self.get_channel(log_channel_id)
-        await log_channel.send(
-            'I\'m shutting down, here are the logs for this session.'
-            f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
+        # Send a ready message to all logging channels
+        log_channels_ids = db.column(
+            "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
+            ChannelPurposes.logs.value
         )
-        await log_channel.send(file=file)
+        for channel_id in log_channels_ids:
+            channel = await self.get.channel(channel_id)
+            if channel:
+                await channel.send(
+                    'I\'m shutting down, here are the logs for this session.'
+                    f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
+                    file=file
+                )
 
         file.close()
-        await super().close()        
+        await super().close()
 
     async def load_cogs(self):
         """
