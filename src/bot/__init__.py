@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import discord
 from discord.ext import commands
 
-from constants import ACTIVITY_MSG
+from constants import ACTIVITY_MSG, ChannelPurposes
 from db import db
 from ._get import Get
 from .cog_manager import CogManager
@@ -99,11 +99,16 @@ class Bot(commands.Bot):
 
         log.info('Logged in as %s (ID: %s)', self.user, self.user.id)
 
-        # Send a message into the discord log channel
-        log_channel_id = self.config['guild']['channel_ids']['logs']
-        log_channel = self.get_channel(log_channel_id)
-        await log_channel.send('**I\'m back online!**')
-    
+        # Send a ready message to all logging channels
+        log_channels_ids = db.column(
+            "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
+            ChannelPurposes.logs.value
+        )
+        for channel_id in log_channels_ids:
+            channel = await self.get.channel(channel_id)
+            if channel:
+                await channel.send('**I\'m back online!**')
+
     async def close(self):
         """Handles the shutdown process of the bot"""
 
