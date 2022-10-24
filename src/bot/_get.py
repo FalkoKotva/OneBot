@@ -43,7 +43,7 @@ class Get:
         channel_obj = self.bot.get_channel(_id)
         return channel_obj or await self.bot.fetch_channel(_id)
 
-    async def member(self, _id, /) -> discord.Member | None:
+    async def user(self, _id, /) -> discord.User | None:
         """Get a discord member object from an ID.
 
         Args:
@@ -53,6 +53,14 @@ class Get:
             None: If the member is not found.
         """
 
-        log.debug('Getting member object')
+        log.debug('Getting user object')
         member_obj = self.bot.get_user(_id)
         return member_obj or await self.bot.fetch_user(_id)
+
+    async def member(self, member_id, guild_id, /) -> discord.Member:
+        """Get a discord Member from a Guild"""
+
+        log.debug('Getting member object')
+        guild_obj = await self.guild(guild_id)
+        member_obj = guild_obj.get_member(member_id)
+        return member_obj or await guild_obj.fetch_member(member_id)
