@@ -8,12 +8,53 @@ from discord import Interaction as Inter
 from tabulate import tabulate
 from num2words import num2words
 
+from db import db
 from utils import normalized_name
 from constants import BDAY_HELP_MSG
 from .views import EmbedPageView
 
 
 log = logging.getLogger(__name__)
+
+
+class ListConfiguredChannelsEmbed(discord.Embed):
+    """List all configured channels for this guild"""
+
+    def __init__(self, bot, data:list[tuple[int, int, int]]):
+
+        super().__init__(
+            title="Integrated Channels",
+            description="List of all channels configured for this guild",
+            colour=discord.Colour.blurple()  # cspell: disable-line
+        )
+
+        purposes = db.records("SELECT * FROM guild_channel_purposes")
+        purpose_map = {id: name for id, name in purposes}
+
+        for channel_id, _, purpose_id in data:
+            channel = bot.get_channel(channel_id)
+
+            self.add_field(
+                name=purpose_map[purpose_id],
+                value=channel.mention,
+            )
+
+
+class SetChannelEmbed(discord.Embed):
+    """Embed for setting a channel."""
+
+    def __init__(
+        self,
+        channel:discord.TextChannel | discord.VoiceChannel,
+        key_name: str
+    ):
+        super().__init__(
+            title="Channel Set",
+            description=f"Set {channel.mention} to {key_name}",
+            timestamp=datetime.utcnow(),
+            colour=discord.Colour.green()
+        )
+        self.set_footer(text="Channel Set")
 
 
 class ClaimedExpClusterEmbed(discord.Embed):

@@ -58,7 +58,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         return (ceil(level) / 0.07) ** 2
 
     async def get_level_for(
-        self, member:discord.Member
+        self, member:discord.Member, guild_id:int
     ) -> Tuple[float, float, float, int]:
         """Get level data for the given member
 
@@ -70,7 +70,10 @@ class LevelCog(BaseCog, name='Level Progression'):
         """
 
         # Get their data from the database
-        data = db.records("SELECT * FROM member_levels")
+        data = db.records(
+            "SELECT * FROM member_levels WHERE guild_id=?",
+            guild_id
+        )
 
         # We can't continue if there is no data
         if not data:
@@ -102,7 +105,10 @@ class LevelCog(BaseCog, name='Level Progression'):
     async def gain_exp(self, member:discord.Member, amount:int):
         """Gives the given member the given amount of exp"""
 
-        log.debug('%s is gaining %s exp', member, amount)
+        log.info(
+            '%s from %s is gaining %s exp',
+            member, member.guild.name, amount
+        )
 
         # Get their data from the database
         db_exp = db.field(
@@ -112,7 +118,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         # We can't continue if they aren't in the database.
         if not db_exp:
-            log.debug(
+            log.info(
                 '%s is not in the database, cant update their level',
                 member
             )
@@ -127,7 +133,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         )
         db.commit()
 
-        log.debug('Updated exp for %s to %s', member, exp)
+        log.info('Updated exp for %s to %s', member, exp)
 
         return exp
 
@@ -204,11 +210,11 @@ class LevelCog(BaseCog, name='Level Progression'):
         log.debug("Validating members")
 
         i = 0
-        guild = await self.bot.get.guild(self.bot.main_guild_id)
-        for i, member in enumerate(guild.members):
-            self.register_member(member)
+        for guild in self.bot.guilds:
+            for i, member in enumerate(guild.members):
+                self.register_member(member)
 
-        log.debug("Validated %s members", i)
+            log.debug("Validated %s members for %s", i, guild.name)
 
     @app_commands.command(name="scoreboard")
     async def see_scoreboard(self, inter:Inter):
@@ -224,7 +230,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         )
 
         data = [
-            (member.id,) + await self.get_level_for(member) \
+            (member.id,) + await self.get_level_for(member, inter.guild.id) \
             for member in inter.guild.members
         ]
 
@@ -259,7 +265,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug('%s is checking the rank of %s', inter.user, member)
 
-        await inter.response.defer()
+        await inter.response.defer(ephemeral=ephemeral)
 
         if member.bot:
             log.debug("Member is a bot, not sending levelboard")
@@ -270,7 +276,7 @@ class LevelCog(BaseCog, name='Level Progression'):
             return
 
         # Get the level data for the member
-        level_data = await self.get_level_for(member)
+        level_data = await self.get_level_for(member, inter.guild.id)
 
         # We can't continue if there is no data
         if not level_data:

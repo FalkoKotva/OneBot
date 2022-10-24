@@ -1,11 +1,11 @@
 """Cog for welcoming new members"""
 
 import discord
-from discord import Interaction
-from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 
+from constants import ChannelPurposes
+from db import db
 from . import BaseCog
 
 
@@ -14,7 +14,21 @@ class Welcome(BaseCog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.welcome_channel_id = bot.config['guild']['channel_ids']['welcome']
+
+    async def _get_channel_from_purpose(
+        self,
+        guild_id:int,
+        purpose_id:int
+    ) -> discord.TextChannel | None:
+        """Get a channel object"""
+
+        channel_id = db.field(
+            "SELECT channel_id FROM guild_channels " \
+            "WHERE guild_id = ? AND purpose_id = ?",
+            guild_id, purpose_id
+        )
+        channel = await self.bot.get.channel(channel_id)
+        return channel
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
@@ -24,9 +38,12 @@ class Welcome(BaseCog):
             member (discord.Member): The new member.
         """
 
-        embed = await self.get_welcome_embed(member)
-        channel = self.bot.get_channel(self.welcome_channel_id)
-        await channel.send(embed=embed)
+        channel = await self._get_channel_from_purpose(
+            member.guild.id, ChannelPurposes.members_say_welcome.value
+        )
+        if channel:
+            embed = await self.get_welcome_embed(member)
+            await channel.send(embed=embed)
         
     @commands.Cog.listener()
     async def on_member_remove(self, member:discord.Member):
@@ -36,37 +53,12 @@ class Welcome(BaseCog):
             member (discord.Member): The member that left.
         """
 
-        embed = await self.get_remove_embed(member)
-        channel = self.bot.get_channel(self.welcome_channel_id)
-        await channel.send(embed=embed)
-    
-    group = app_commands.Group(
-        name='wtest',
-        description='Test the join/leave events',
-        default_permissions=discord.Permissions(moderate_members=True)
-    )
-    
-    @group.command(name='join')
-    async def welcome_test(self, interaction:Interaction, member:discord.Member):
-        """Test command for the welcome view and embed"""
-
-        # Get and send the embed
-        embed = await self.get_welcome_embed(member)
-        await interaction.channel.send(embed=embed)
-
-        # Acknowledge the interaction to prevent an error
-        await interaction.response.send_message('done')
-
-    @group.command(name='remove')
-    async def remove_test(self, inter:Interaction, member:discord.Member):
-        """Test command for the remove embed"""
-
-        # Get and send the embed
-        embed = await self.get_remove_embed(member)
-        await inter.channel.send(embed=embed)
-
-        # Acknowledge the interaction to prevent an error
-        await inter.response.send_message('done')
+        channel = await self._get_channel_from_purpose(
+            member.guild.id, ChannelPurposes.members_say_goodbye.value
+        )
+        if channel:
+            embed = await self.get_remove_embed(member)
+            await channel.send(embed=embed)
 
     async def get_welcome_embed(
         self, member:discord.Member, /
@@ -133,7 +125,4 @@ class Welcome(BaseCog):
 async def setup(bot):
     """Setup the welcome cog"""
 
-    await bot.add_cog(
-        Welcome(bot),
-        guilds=(bot.main_guild,)
-    )
+    await bot.add_cog(Welcome(bot))

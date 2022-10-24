@@ -59,7 +59,7 @@ class CogManager(BaseCog, name='Cog Manager'):
             #
             self.bot.commands_synced = False
             await func()
-            await self.bot.sync_slash_commands()
+            await self.bot.sync_app_commands()
 
         except commands.ExtensionAlreadyLoaded:            
             # Action requires cog to be unloaded

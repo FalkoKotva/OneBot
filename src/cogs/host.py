@@ -13,14 +13,14 @@ from utils import check_is_owner
 log = logging.getLogger(__name__)
 
 
-class InfoCog(BaseCog, name='Server'):
+class HostCog(BaseCog, name='Host Interactions'):
     """Cog for info commands."""
 
     def __init__(self, bot):
         super().__init__(bot=bot)
 
     group = app_commands.Group(
-        name='server',
+        name='host',
         description='Server commands'
     )
 
@@ -48,18 +48,6 @@ class InfoCog(BaseCog, name='Server'):
                 'Latency': f'{round(self.bot.latency*1000, 2)}ms',
             }
         }
-
-    @group.command(name='shutdown')
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.check(check_is_owner)
-    async def server_shutdown(self, inter:Inter):
-        """Shutdown the bot"""
-        log.info(
-            f'{inter.user.name}#{inter.user.discriminator} '
-            f'({inter.user.id}) is shutting down the bot'
-        )
-        await inter.response.send_message('Shutting down...')
-        await self.bot.close()
 
     @group.command(name='uptime')
     async def server_uptime(self, inter:Inter):
@@ -99,4 +87,4 @@ class InfoCog(BaseCog, name='Server'):
 
 
 async def setup(bot):
-    await bot.add_cog(InfoCog(bot=bot))
+    await bot.add_cog(HostCog(bot=bot))
