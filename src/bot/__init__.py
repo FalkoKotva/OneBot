@@ -3,6 +3,7 @@
 import os
 import time
 import logging
+from sqlite3 import IntegrityError
 from datetime import timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -53,10 +54,6 @@ class Bot(commands.Bot):
         # Set the bot's activity status
         self.activity = discord.Game(name=ACTIVITY_MSG)
 
-        # Get the main discord server
-        self.main_guild_id = config['guild']['id']
-        self.main_guild = discord.Object(id=self.main_guild_id)
-
     @property
     def uptime(self) -> timedelta:
         """Returns the bot's uptime as a timedelta object"""
@@ -84,6 +81,26 @@ class Bot(commands.Bot):
             self.commands_synced = True
             log.info('App Commands Synced')
 
+    async def sync_guilds(self) -> None:
+        """Sync guilds with the database"""
+
+        log.info("Syncing guilds with the database")
+
+        await self.wait_until_ready()
+
+        for guild in self.guilds:
+            try:
+                log.debug("Syncing guild %s", guild.name)
+                db.execute(
+                    "INSERT INTO guilds (guild_id) VALUES (?)",
+                    guild.id
+                )
+            except IntegrityError as err:
+                log.error(err)
+                continue
+
+            db.commit()
+
     async def send_logs(self, msg:str, include_file:bool=False) -> None:
         """Send a message to all purposed log channels
 
@@ -96,7 +113,7 @@ class Bot(commands.Bot):
 
         log_channel_ids = db.column(
             "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
-            ChannelPurposes.logs.value
+            ChannelPurposes.bot_logs.value
         )
 
         log.debug(
@@ -116,11 +133,33 @@ class Bot(commands.Bot):
                 file = discord.File(self.log_filepath, filename=filename)
                 await channel.send(file=file)
 
+    async def on_guild_join(self, guild:discord.Guild):
+        """Sync the guilds when the bot joins a new guild"""
+
+        log.info('Joined guild %s', guild.name)
+        await self.sync_guilds()
+
+    async def on_guild_remove(self, guild:discord.Guild):
+        """Called when the bot leaves a guild"""
+
+        log.info('Left guild %s', guild.name)
+
+        db.execute(
+            "DELETE FROM guilds WHERE guild_id = ?",
+            guild.id
+        )
+        db.commit()
+
+        log.debug("Removed guild %s from the database", guild.name)
+
     async def on_ready(self) -> None:
         """
         Called when the bot logs in.
         Syncs slash commands and prints a ready message.
         """
+
+        # Sync the bot guilds
+        await self.sync_guilds()
 
         # Sync app commands with discord
         await self.sync_app_commands()

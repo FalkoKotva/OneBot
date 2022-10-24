@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 # Connect to the database
 conn = connect(DB_PATH, check_same_thread=False)
 cur = conn.cursor()
+cur.execute("PRAGMA foreign_keys = ON;")  # enable foreign keys
+
 log.info("Database connection established")
 
 def with_commit(func):
