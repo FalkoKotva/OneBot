@@ -1,7 +1,6 @@
 """Cog for the automated birthday celebration system."""
 
 import logging
-from functools import cache
 from datetime import datetime, time
 from num2words import num2words
 from discord.ext import tasks
@@ -9,7 +8,7 @@ from discord import app_commands, Interaction as Inter
 import discord
 
 from utils import normalized_name
-from constants import DATE_FORMAT
+from constants import DATE_FORMAT, ChannelPurposes, RolePurposes
 from ui import (
     BirthdayModal,
     NextBirthdayEmbed,
@@ -30,7 +29,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         super().__init__(bot=bot)
 
         # Start the task to check for birthdays
-        self.check_birthdays.start()  # pylint: disable=no-member
+        self.check_birthdays.start() 
 
         # Context menu version of see cmd
         see_menu = app_commands.ContextMenu(
@@ -56,7 +55,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         # Get the current date to check against
         now = datetime.now()
 
-        # Loop through all users
+        # Loop through all users and check to celebrate birthday
         for user_id, bday_str in data:
 
             # Convert the string to a datetime object
@@ -81,48 +80,71 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             age (int): The user's age.
         """
 
-        # Get the channel to celebrate in
-        channel_id = self.bot.config['guild']['channel_ids']['alerts']
-        channel: discord.TextChannel = await self.bot.get.channel(channel_id)
+        log.debug('Attempting to celebrate birthday')
 
-        # Get the birthday role
-        role_id = self.bot.config['guild']['role_ids']['birthday']
-        role = channel.guild.get_role(role_id)
-
-        # Get the user
-        member = channel.guild.get_member(user_id)
-
-        # If the member is not in the guild, we can't celebrate
-        if not member:
-            log.debug(
-                'Member %s not found, skipping their birthday',
-                normalized_name(member)
-            )
-            return
-
-        # Assign the birthday role to the member
-        await member.add_roles(role)
-
-        # Number of members in the guild
-        member_count = len(channel.guild.members) - 1  # -1 for the user
-
-        # Reactions
+        channel_data = db.records(
+            "SELECT * FROM guild_channels WHERE purpose_id = ?",
+            ChannelPurposes.announcements.value
+        )
+        role_data = db.records(
+            "SELECT * FROM guild_roles WHERE purpose_id = ?",
+            RolePurposes.birthday.value
+        )
         reactions = ('🎂', '🎉')
 
-        # Create the celebration embed
-        embed = CelebrateBirthdayEmbed(
-            member=member,
-            age=age,
-            member_count=member_count,
-            reactions=reactions
-        )
+        for guild in self.bot.guilds:
 
-        # Send the celebration announcement!
-        msg = await channel.send(embed=embed)
+            log.debug("Attempting to celebrate birthday in %s", guild.name)
 
-        # Add the reactions to the sent message!
-        for reaction in reactions:
-            await msg.add_reaction(reaction)
+            # get the member for this guild
+            member = await self.bot.get.member(user_id, guild.id)
+            if not member:
+                log.debug("Member not found in guild, skipping")
+                continue
+
+            log.debug("Found member %s", member.name)
+
+            # get the channel and send a message
+            channel_id = 0
+            for channel_id, guild_id, channel_purpose in channel_data:
+                if guild_id == guild.id and \
+                    channel_purpose == ChannelPurposes.announcements.value:
+                    break
+            else:
+                log.debug("Channel not found, skipping")
+                continue
+
+            channel = await self.bot.get.channel(channel_id)
+            log.debug("Found channel %s", channel)
+
+            if channel:
+                msg = await channel.send(embed=CelebrateBirthdayEmbed(
+                    member=member,
+                    age=age,
+                    member_count=guild.member_count,
+                    reactions=reactions
+                ))
+                for reaction in reactions:
+                    await msg.add_reaction(reaction)
+                log.debug("Sent message")
+
+            # get the birthday role and remove it from the member
+            role_id = 0
+            for role_id, guild_id, role_purpose in role_data:
+                if guild_id == guild.id and \
+                    role_purpose == RolePurposes.birthday.value:
+                    break
+            else:
+                log.debug("Role not found, skipping")
+                continue
+
+            role = guild.get_role(role_id)
+            log.debug("Found role %s", role)
+
+            await member.add_roles(role)
+            log.debug("Added role")
+
+        log.debug("Finished celebrating birthday")
 
     async def wrap_up_birthday(self, user_id:int):
         """Stop celebrating a user birthday
@@ -353,14 +375,14 @@ class BirthdayCog(BaseCog, name='Birthdays'):
         their birthday or not.
         """
 
+        # This can take a while, defer the interaction
+        await inter.response.defer()
+
         # Just call the normal celebrate function
         await self.celebrate_birthday(member.id, age)
 
         # Respond to the interaction to avoid an error
-        await inter.response.send_message(
-            'Birthday celebrated!',
-            ephemeral=True
-        )
+        await inter.followup.send('Birthday celebrated!')
 
     @admin_group.command(name='wrapup')
     async def force_wrap_up_birthday(
