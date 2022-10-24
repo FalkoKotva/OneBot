@@ -8,7 +8,9 @@ from .embeds import (
     HelpChannelsEmbed,
     EmbedPageManager,
     ExpClusterEmbed,
-    ClaimedExpClusterEmbed
+    ClaimedExpClusterEmbed,
+    SetChannelEmbed,
+    ListConfiguredChannelsEmbed
 )
 from .views import EmbedPageView, ExpClusterView
 from .levelcards import LevelCard
