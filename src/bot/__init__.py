@@ -71,8 +71,8 @@ class Bot(commands.Bot):
         _time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self._start_time))
         return f'{_time}'
 
-    async def sync_slash_commands(self):
-        """Sync slash commands with discord"""
+    async def sync_app_commands(self) -> None:
+        """Sync app commands with discord"""
 
         log.info('Syncing App Commands')
 
@@ -81,33 +81,57 @@ class Bot(commands.Bot):
 
         if not self.commands_synced:
             await self.tree.sync()
-            await self.tree.sync(guild=self.get_guild(self.main_guild_id))
             self.commands_synced = True
             log.info('App Commands Synced')
 
-    async def on_ready(self):
+    async def send_logs(self, msg:str, include_file:bool=False) -> None:
+        """Send a message to all purposed log channels
+
+        Args:
+            msg (str): The message to send.
+            include_file (bool, optional): Whether to include the log file. Defaults to False.
+        """
+
+        log.info("Sending logs to all logging channels")
+
+        log_channel_ids = db.column(
+            "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
+            ChannelPurposes.logs.value
+        )
+
+        log.debug(
+            "Found %s logging channels, sending",
+            len(log_channel_ids)
+        )
+
+        for channel_id in log_channel_ids:
+
+            # Get the channel and send the message
+            channel = await self.get.channel(channel_id)
+            await channel.send(msg)
+
+            # Follow up with a new log file if requested
+            if include_file:
+                filename = os.path.basename(self.log_filepath)
+                file = discord.File(self.log_filepath, filename=filename)
+                await channel.send(file=file)
+
+    async def on_ready(self) -> None:
         """
         Called when the bot logs in.
         Syncs slash commands and prints a ready message.
         """
 
-        # Sync app commands
-        await self.sync_slash_commands()
+        # Sync app commands with discord
+        await self.sync_app_commands()
 
-        # Start the scheduler
+        # Start the scheduler for db autosaving
         self.scheduler.start()
 
         log.info('Logged in as %s (ID: %s)', self.user, self.user.id)
 
         # Send a ready message to all logging channels
-        log_channels_ids = db.column(
-            "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
-            ChannelPurposes.logs.value
-        )
-        for channel_id in log_channels_ids:
-            channel = await self.get.channel(channel_id)
-            if channel:
-                await channel.send('**I\'m back online!**')
+        await self.send_logs('**I\'m back online!**')
 
     async def close(self):
         """Handles the shutdown process of the bot"""
@@ -115,24 +139,12 @@ class Bot(commands.Bot):
         log.info('Shutting down...')
         filename = os.path.basename(self.log_filepath)
 
-        # Create a discord file object
-        file = discord.File(self.log_filepath, filename=filename)
-
         # Send a ready message to all logging channels
-        log_channels_ids = db.column(
-            "SELECT channel_id FROM guild_channels WHERE purpose_id = ?",
-            ChannelPurposes.logs.value
+        await self.send_logs(
+            'I\'m shutting down, here are the logs for this session.' \
+            f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
+            include_file=True
         )
-        for channel_id in log_channels_ids:
-            channel = await self.get.channel(channel_id)
-            if channel:
-                await channel.send(
-                    'I\'m shutting down, here are the logs for this session.'
-                    f'\nStarted: {filename[:-4]}\nUptime: {str(self.uptime)}',
-                    file=file
-                )
-
-        file.close()
         await super().close()
 
     async def load_cogs(self):
