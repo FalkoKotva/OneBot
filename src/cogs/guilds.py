@@ -7,7 +7,6 @@ import discord
 from discord import (
     app_commands,
     TextChannel,
-    VoiceChannel,
     Interaction as Inter,
     Role
 )
@@ -117,11 +116,11 @@ class GuildsCog(BaseCog, name="Guild Integrations"):
 
         if self.set_purpose(channel, purpose):
             await inter.response.send_message(
-                f"Channel {channel.mention} is now configured for {purpose.name}"
+                f"{channel.mention} has been purposed for {purpose.name}"
             )
         else:
             await inter.response.send_message(
-                "This channel is already configured for a purpose"
+                "This channel is already has a purpose"
             )
 
     @channel_group.command(name="remove")
@@ -131,7 +130,7 @@ class GuildsCog(BaseCog, name="Guild Integrations"):
         self.remove_purpose(channel)
 
         await inter.response.send_message(
-            f"Channel {channel.mention} is no longer configured"
+            f"Channel {channel.mention} no longer has a purpose with me"
         )
 
     @role_group.command(name="set")
@@ -141,7 +140,7 @@ class GuildsCog(BaseCog, name="Guild Integrations"):
 
         if self.set_purpose(role, purpose):
             await inter.response.send_message(
-                f"Role {role.mention} is now configured for {purpose.name}"
+                f"{role.mention} has been purposed for {purpose.name}"
             )
         else:
             await inter.response.send_message(
