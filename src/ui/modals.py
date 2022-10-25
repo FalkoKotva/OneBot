@@ -11,6 +11,47 @@ from discord import ui as dui
 log = logging.getLogger(__name__)
 
 
+class BanMemberModal(dui.Modal, title="Confirm Ban"):
+    """Confirm a ban before proceeding"""
+    
+    name_input = dui.TextInput(
+        label="Confirm the member's discriminator",
+        style=discord.TextStyle.short,
+        required=True
+    )
+
+    reason_input = dui.TextInput(
+        label="Reason For Ban:",
+        placeholder="Example: violating the rules",
+        style=discord.TextStyle.long,
+        required=False
+    )
+
+    def __init__(self, member:discord.Member):
+
+        log.debug("Creating BanMemberModal")
+
+        self.member = member
+        self._confirm_name = member.discriminator
+        self.name_input.placeholder = self._confirm_name
+
+        super().__init__()
+
+    async def on_submit(self, inter:Inter):
+
+        log.debug("BanMemberModal submitted")
+
+        confirmed_name = self.name_input.value
+        assert confirmed_name == self._confirm_name, "Discriminator does not match"
+
+        log.debug("Name confirmed, banning member")
+
+        await self.member.ban(reason=self.reason_input.value)
+
+        log.debug("Banned")
+
+        await inter.response.send_message("Member banned")
+
 class BirthdayModal(dui.Modal, title='Birthday'):
     """Modal for submitting member birthdays"""
 

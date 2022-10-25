@@ -1,6 +1,6 @@
 """Init the ui package"""
 
-from .modals import BirthdayModal
+from .modals import BirthdayModal, BanMemberModal
 from .embeds import (
     NextBirthdayEmbed,
     BirthdayHelpEmbed,
