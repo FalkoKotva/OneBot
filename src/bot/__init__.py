@@ -25,18 +25,15 @@ class Bot(commands.Bot):
     # Discordpy doesnt automatically sync commands so we need a check
     commands_synced = False
 
-    config: dict
     log_filepath: str
 
-    def __init__(self, config:dict, log_filepath:str):
+    def __init__(self, log_filepath:str):
         """Initialize the bot.
 
         Args:
-            config (dict): The config data.
             log_filepath (str): Log filepath for the current session.
         """
 
-        self.config = config
         self.log_filepath = log_filepath
         self.get: Get = Get(self)
 

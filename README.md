@@ -9,8 +9,8 @@ To run this bot, you will need to provide it with a token to use. This can be do
 
 ### Config
 
-The bot makes use of configs located at data/ called `test.config.json` and `live.config.json` for testing and going live respectively. You will need to set this up with your own configs for the bot to work in an alternate server.
-
+There are various commands you can use to configure the bot from your discord client. These are:
+- /purpose
 ### Database
 
 The database file will be automatically created when you run the bot for the first time. It will be called `db.sqlite3` and will be in the root directory of the project.

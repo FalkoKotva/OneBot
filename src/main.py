@@ -7,7 +7,7 @@ import discord
 
 from bot import Bot
 from logs import setup_logs
-from constants import BAD_TOKEN, NO_TOKEN, NO_CONFIG
+from constants import BAD_TOKEN, NO_TOKEN
 
 
 log = logging.getLogger('main')
@@ -15,17 +15,8 @@ log = logging.getLogger('main')
 async def main():
     """Main function for starting the application"""
 
-    # Get the bot config
-    try:
-        with open('./data/test.config.json', 'r', encoding='utf-8') as file:
-            config = json.load(file)
-    except FileNotFoundError:
-        print(NO_CONFIG)
-        return
-
     # Setup logging before anything else
-    log_level = config['log_level']
-    log_filepath = setup_logs(log_level=log_level)
+    log_filepath = setup_logs(log_level=logging.DEBUG)
 
     # Get the secret token
     try:
@@ -36,7 +27,7 @@ async def main():
         return
 
     # Initialize the bot
-    async with Bot(config, log_filepath) as bot:
+    async with Bot(log_filepath) as bot:
 
         # Load the bot's cogs
         await bot.load_cogs()
