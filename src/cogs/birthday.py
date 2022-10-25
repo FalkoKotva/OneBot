@@ -153,28 +153,37 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             user_id (int): The user's ID.
         """
 
-        log.debug('Attempting to wrap up birthday')
+        log.debug('Attempting to wrap up birthdays')
 
-        # Get the guild
-        guild_id = self.bot.main_guild_id
-        guild: discord.Guild = await self.bot.get.guild(guild_id)
 
-        # Get the birthday role
-        role_id = self.bot.config['guild']['role_ids']['birthday']
-        role = guild.get_role(role_id)
+        for guild in self.bot.guilds:
+            log.debug("Attempting to wrap up birthday in %s", guild.name)
 
-        # Get the user
-        member = await guild.fetch_member(user_id)
-        name = normalized_name(member)
+            member: discord.Member = await self.bot.get.member(user_id, guild.id)
+            if not member:
+                log.debug("Member not found in guild, skipping")
+                continue
 
-        # Remove the role from the member
-        if role in member.roles:
-            log.info('Removing birthday role from %s;', name)
+            log.debug("Found member %s", member.name)
+
+            role_id = db.field(
+                "SELECT role_id FROM guild_roles " \
+                "WHERE guild_id = ? AND purpose_id = ?",
+                guild.id, RolePurposes.birthday.value
+            )
+            role = guild.get_role(role_id)
+            if not role:
+                log.debug("Role not found, skipping")
+                continue
+
+            if role not in member.roles:
+                log.debug("member does not have role, skipping")
+                continue
+
             await member.remove_roles(role)
-            return
+            log.debug("Removed role")
 
-        log.debug('Birthday role not found on member, skipping %s', name)
-
+        log.debug("Finished wrapping up birthdays")
 
     # All birthday commands are in this group
     group = app_commands.Group(
