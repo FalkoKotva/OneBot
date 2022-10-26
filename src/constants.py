@@ -9,6 +9,7 @@ from db import db
 # Bot constants
 ACTIVITY_MSG = 'I am up and running!'
 DATE_FORMAT = '%d/%m/%Y'
+DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
 
 # Command constants
 BDAY_HELP_MSG = 'Use `/birthday help` for more info'
