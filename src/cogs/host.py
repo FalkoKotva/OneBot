@@ -7,7 +7,6 @@ import discord
 from discord import app_commands, Interaction as Inter
 
 from . import BaseCog
-from utils import check_is_owner
 
 
 log = logging.getLogger(__name__)
@@ -16,8 +15,11 @@ log = logging.getLogger(__name__)
 class HostCog(BaseCog, name='Host Interactions'):
     """Cog for info commands."""
 
-    def __init__(self, bot):
-        super().__init__(bot=bot)
+    @app_commands.command(name="echo")
+    async def echo_cmd(self, inter:Inter, *, message:str):
+        """Echo a message back to the chat"""
+
+        await inter.response.send_message(message)
 
     group = app_commands.Group(
         name='host',
