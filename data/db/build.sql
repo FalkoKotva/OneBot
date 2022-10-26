@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS member_levels (
     FOREIGN KEy (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS guild_mutes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    guild_id INTEGER NOT NULL,
+    reason TEXT,
+    end_datetime TEXT NOT NULL,
+    FOREIGN KEY (guild_id) REFERENCES guilds(guild_id) ON DELETE CASCADE
+);
+
 -- Channel keys are used by modules in the bot to identify channels
 CREATE TABLE IF NOT EXISTS guild_channel_purposes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

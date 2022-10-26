@@ -17,6 +17,40 @@ from .views import EmbedPageView
 log = logging.getLogger(__name__)
 
 
+class ListMutedEmbed(discord.Embed):
+    """List all muted members for the given data"""
+
+    def __init__(self, bot, guild_id:int, data:list):
+        super().__init__(
+            title="Muted Members",
+            description="```{}```",
+            colour=discord.Colour.dark_grey()
+        )
+        self.data = data
+        self.guild_id = guild_id
+
+    def _remove_member(self, member_id: int):
+        db.execute(
+            "DELETE FROM guild_muted WHERE member_id = ? AND guild_id = ?",
+            member_id, self.guild_id
+        )
+
+    async def populate(self):
+        """Populate the embed with the data"""
+
+        desc = ""
+
+        for member_id, reason, end_dt, in self.data:
+            member = await self.bot.get.member(member_id, self.guild_id)
+            if not member:
+                self._remove_member(member_id)
+                continue
+
+            desc += f"{member.mention} - {reason} - {end_dt}"
+
+        self.description.format(desc)
+
+
 class ListConfiguredChannelsEmbed(discord.Embed):
     """List all configured channels for this guild"""
 
