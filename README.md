@@ -22,7 +22,7 @@ Download ffmpeg from [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7
 
 ## Development Plans
 
-- [ ] Redesign the database code
+- [x] Redesign the database code
 - [ ] Add a custom help command
 - [ ] Create a customizable and detailed user profile system
 - [ ] Add a command to allow users to add their own roles
