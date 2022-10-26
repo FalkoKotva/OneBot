@@ -20,12 +20,12 @@ class ContribCog(BaseCog, name='Contributions'):
         description='Contribution commands'
     )
 
-    @group.command(name='learn')
+    @group.command(name='link')
     async def contribute(self, inter:Inter):
-        """Learn how to contribute to the bot."""
+        """Link to contribute to the bot."""
 
         await inter.response.send_message(
-            'WIP',
+            "https://github.com/XordK/OneBot",
             ephemeral=True
         )
 
