@@ -4,15 +4,15 @@ import os
 import time
 import logging
 from sqlite3 import IntegrityError
-from datetime import timedelta
+from datetime import timedelta, time as dt_time
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from constants import ACTIVITY_MSG, ChannelPurposes
+from constants import ChannelPurposes
 from db import db
 from ._get import Get
+from ._logs import setup_logs
 from .cog_manager import CogManager
 
 
@@ -22,34 +22,36 @@ log = logging.getLogger(__name__)
 class Bot(commands.Bot):
     """This class is the root of the bot."""
 
-    # Discordpy doesnt automatically sync commands so we need a check
-    commands_synced = False
+    __slots__ = (
+        "_start_time",
+        "log_filepath",
+        "get",
+        
+        "commands_synced"
+    )
 
-    log_filepath: str
+    def __init__(self):
+        """Initialize the bot"""
 
-    def __init__(self, log_filepath:str):
-        """Initialize the bot.
-
-        Args:
-            log_filepath (str): Log filepath for the current session.
-        """
-
-        self.log_filepath = log_filepath
-        self.get: Get = Get(self)
-
-        # Scehdule the database autosaving
-        self.scheduler = AsyncIOScheduler()
-        db.autosave(self.scheduler)
-
-        # Use this to roughly track the uptime
+        # Roughly the time the bot was started
         self._start_time = time.time()
 
-        # Setup the bot's intents
-        intents = discord.Intents.all()
-        super().__init__(command_prefix='ob ', intents=intents)
+        super().__init__(
+            command_prefix="ob ",
+            intents=discord.Intents.all(),
+            help_command=None
+        )
 
-        # Set the bot's activity status
-        self.activity = discord.Game(name=ACTIVITY_MSG)
+        self.get: Get = Get(self)
+        self.log_filepath = setup_logs()
+        self.commands_synced = False
+ 
+    @tasks.loop(minutes=5)
+    async def _autosave_db(self):
+        """Autosave the database"""
+
+        log.info("Autosaving database")
+        db.commit()
 
     @property
     def uptime(self) -> timedelta:
@@ -93,7 +95,10 @@ class Bot(commands.Bot):
                     guild.id
                 )
             except IntegrityError as err:
-                log.error(err)
+                log.debug(
+                    "Guild %s already exists in the database",
+                    guild.name
+                )
                 continue
 
             db.commit()
@@ -161,8 +166,9 @@ class Bot(commands.Bot):
         # Sync app commands with discord
         await self.sync_app_commands()
 
-        # Start the scheduler for db autosaving
-        self.scheduler.start()
+        # Start the database autosave task
+        log.debug("Started autosave task")
+        self._autosave_db.start()
 
         log.info('Logged in as %s (ID: %s)', self.user, self.user.id)
 

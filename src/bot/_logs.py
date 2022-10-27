@@ -69,7 +69,7 @@ def update_log_levels(logger_names:tuple[str], level:int):
         logger=logging.getLogger(name)
         logger.setLevel(level)
 
-def setup_logs(log_level:int) -> str:
+def setup_logs(log_level:int=logging.DEBUG) -> str:
     """
     Setup a logging queue handler and queue listener.
     Also creates a new log file for the current session and deletes old
@@ -99,7 +99,7 @@ def setup_logs(log_level:int) -> str:
     
     # Mute loud loggers
     update_log_levels(
-        ('discord', 'PIL', 'urllib3', 'aiosqlite', 'apscheduler'),
+        ('discord', 'PIL', 'urllib3', 'aiosqlite'),
         logging.WARNING
     )
 

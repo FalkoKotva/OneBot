@@ -44,12 +44,6 @@ def commit():
     log.debug("Committing changes")
     conn.commit()
 
-def autosave(sched):
-    """Schedule a job to autosave the database every minute"""
-
-    log.debug("Scheduling autosave")
-    sched.add_job(commit, CronTrigger(minute=0))
-
 def close():
     """Close the database connection"""
 
