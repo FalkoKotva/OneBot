@@ -3,7 +3,6 @@
 import logging
 from os.path import isfile
 from sqlite3 import connect
-from apscheduler.triggers.cron import CronTrigger
 
 DB_PATH = './data/db/db.sqlite3'
 BUILD_PATH = './data/db/build.sql'

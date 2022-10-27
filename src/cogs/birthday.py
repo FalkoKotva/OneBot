@@ -2,12 +2,10 @@
 
 import logging
 from datetime import datetime, time
-from num2words import num2words
 from discord.ext import tasks
 from discord import app_commands, Interaction as Inter
 import discord
 
-from utils import normalized_name
 from constants import DATE_FORMAT, ChannelPurposes, RolePurposes
 from ui import (
     BirthdayModal,
@@ -33,7 +31,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
 
         # Context menu version of see cmd
         see_menu = app_commands.ContextMenu(
-            name="See Birthday",
+            name="Get Birthday",
             callback=self.context_see_birthday,
         )
         self.bot.tree.add_command(see_menu)
