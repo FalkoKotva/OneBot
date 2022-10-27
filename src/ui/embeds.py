@@ -10,11 +10,35 @@ from num2words import num2words
 
 from db import db
 from utils import normalized_name
-from constants import BDAY_HELP_MSG
+from constants import (BDAY_HELP_MSG, PRONOUNDB_LOGIN_URL, PRONOUNDB_SET_URL)
 from .views import EmbedPageView
 
 
 log = logging.getLogger(__name__)
+
+
+class SetPronounsEmbed(discord.Embed):
+    """Embed for explaining how to set your pronouns with PronounDB"""
+
+    def __init__(self):
+        super().__init__(
+            title="How to set your pronouns",
+            colour=discord.Colour.red()
+        )
+
+        log.debug("Creating SetPronounsEmbed")
+
+        self.description = \
+            "To set your pronouns, you need to:" \
+            "\n\n**1.** Go to PronounDB and add your discord account" \
+            "\n*You can do this by [clicking here]" \
+            f"({PRONOUNDB_LOGIN_URL})*" \
+            "\n\n**2.** Set your pronouns on the next page" \
+            "\n*If you can't find that, [click here]" \
+            f"({PRONOUNDB_SET_URL})*" \
+            "\n\n**3.** You're set, well done!" \
+            "\n*You can now use `/pronouns get` in the server to " \
+            "see your pronouns*"
 
 
 class ListConfiguredChannelsEmbed(discord.Embed):

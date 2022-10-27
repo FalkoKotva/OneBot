@@ -9,29 +9,16 @@ from discord import (
     Interaction as Inter
 )
 
+from constants import PRONOUNDB_GET_URL
+from ui import SetPronounsEmbed
 from . import BaseCog
 
 
-class PronounCog(BaseCog, name="Pronouns"):
-    """Cog for pronoundb integration"""
-
-    __slots__ = ()
-
-    def __init__(self, bot):
-        super().__init__(bot)
-
-        # Context menu version of get cmd
-        get_menu = app_commands.ContextMenu(
-            name="Get Pronouns",
-            callback=self.get_pronouns_ctxmenu,
-        )
-        self.bot.tree.add_command(get_menu)
-
-    def human_readable(self, pronouns_short:str, /) -> str:
-        """Returns a human readable version of the pronouns"""
-
-        pronoun_map = {
-            "unspecified": "Unspecified, (this could be because they haven't set their pronouns yet)",
+log = logging.getLogger(__name__)
+pronoun_map = {
+            "unspecified": 
+                "unspecified, (this could be because they " \
+                "haven't set their pronouns yet)",
             "hh": "he/him",
             "hi": "he/it",
             "hs": "he/she",
@@ -54,16 +41,41 @@ class PronounCog(BaseCog, name="Pronouns"):
             "avoid": "Avoid pronouns, use my name"
         }
 
-        return pronoun_map[pronouns_short]
+class PronounCog(BaseCog, name="Pronouns"):
+    """Cog for pronoundb integration"""
+
+    __slots__ = ()
+
+    def __init__(self, bot):
+        super().__init__(bot)
+
+        # Context menu version of get cmd
+        get_menu = app_commands.ContextMenu(
+            name="Get Pronouns",
+            callback=self.get_pronouns_ctxmenu,
+        )
+        self.bot.tree.add_command(get_menu)
+
+    def human_readable(self, pronouns_short:str, /) -> str:
+        """Returns a human readable version of the pronouns"""
+
+        log.debug(
+            "Converting pronouns \"%s\" to human readable",
+            pronouns_short
+        )
+
+        try:
+            return pronoun_map[pronouns_short]
+        except KeyError as err:
+            log.error(err)
+            return "not found, this is a bug and I've logged the error"
 
     async def get_pronouns(self, member:discord.Member, /) -> str:
         """Get the pronouns of a member as a string"""
 
-        url = "https://pronoundb.org/api/v1/lookup"
-
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{url}?platform=discord&id={member.id}"
+                f"{PRONOUNDB_GET_URL}?platform=discord&id={member.id}"
             )
 
         pronouns_short = response.json()["pronouns"]
@@ -73,6 +85,13 @@ class PronounCog(BaseCog, name="Pronouns"):
         name="pronouns",
         description="PronounDB Integration Commands"
     )
+
+    @group.command(name="set")
+    async def set_pronouns_cmd(self, inter:Inter):
+        """Set your pronouns"""
+
+        embed = SetPronounsEmbed()
+        await inter.response.send_message(embed=embed, ephemeral=True)
 
     @group.command(name="get")
     async def get_pronouns_cmd(self, inter:Inter, member:discord.Member):
