@@ -11,7 +11,8 @@ from .embeds import (
     ClaimedExpClusterEmbed,
     SetChannelEmbed,
     ListConfiguredChannelsEmbed,
-    ListMutedEmbed
+    ListMutedEmbed,
+    SetPronounsEmbed
 )
 from .views import EmbedPageView, ExpClusterView
 from .levelcards import LevelCard

@@ -11,6 +11,11 @@ ACTIVITY_MSG = 'I am up and running!'
 DATE_FORMAT = '%d/%m/%Y'
 DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
 
+# PronounDB constants
+PRONOUNDB_GET_URL = "https://pronoundb.org/api/v1/lookup"
+PRONOUNDB_LOGIN_URL = "https://pronoundb.org/login/"
+PRONOUNDB_SET_URL = "https://pronoundb.org/me"
+
 # Command constants
 BDAY_HELP_MSG = 'Use `/birthday help` for more info'
 
