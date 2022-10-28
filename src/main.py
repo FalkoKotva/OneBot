@@ -14,7 +14,7 @@ async def main():
 
     # Construct the bot, load the cogs and start er up.
     async with Bot() as bot:
-        await bot.load_cogs()
+        await bot.load_extensions()
         await bot.start(token, reconnect=True)
 
 

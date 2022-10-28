@@ -8,7 +8,7 @@ from discord import app_commands
 from discord import Interaction as Inter
 from discord.ext import commands
 
-from cogs import BaseCog
+from ext import BaseCog
 from utils import list_cogs, to_choices
 
 
@@ -101,7 +101,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         """Load one of the bots cogs."""
 
         async def _load():
-            await self.bot.load_extension(f'cogs.{cog.name[:-3]}')
+            await self.bot.load_extension(f'ext.{cog.name[:-3]}')
 
         await self._cog_command_wrapper(
             inter=inter,
@@ -120,7 +120,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         """Unload one of the bots cogs."""
 
         async def _unload():
-            await self.bot.unload_extension(f'cogs.{cog.name[:-3]}')
+            await self.bot.unload_extension(f'ext.{cog.name[:-3]}')
 
         await self._cog_command_wrapper(
             inter=inter,
@@ -139,7 +139,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         """Reload one of the bots cogs"""
 
         async def _reload():
-            await self.bot.reload_extension(f'cogs.{cog.name[:-3]}')
+            await self.bot.reload_extension(f'ext.{cog.name[:-3]}')
 
         await self._cog_command_wrapper(
             inter=inter,

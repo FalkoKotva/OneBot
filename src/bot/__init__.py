@@ -189,29 +189,26 @@ class Bot(commands.Bot):
         )
         await super().close()
 
-    async def load_cogs(self):
-        """
-        Attempts to load all .py files in the cogs directory as cogs.
-        """
+    async def load_extensions(self):
+        """Searches through the ./ext/ directory and loads them"""
 
         # The cog manager is loaded seperately so that it can not be
         # unloaded because it is used to unload other cogs.
         cog_manager = CogManager(self)
-        log.info('Loading %s', cog_manager.qualified_name)
         await self.add_cog(cog_manager)
 
-        log.info('Loading cog files')
+        log.info('Loading extensions')
 
-        for filename in os.listdir('./src/cogs'):
+        for filename in os.listdir('./src/ext'):
 
             # Skip non cog files
             if not filename.endswith('.py') or filename.startswith('_'):
                 log.debug(
-                    'Skipping non cog file %s in cogs directory',
+                    "File \"%s\" is not an extension, skipping",
                     filename
                 )
                 continue
 
-            # Load the cog
-            await self.load_extension(f'cogs.{filename[:-3]}')
-            log.debug('Loading cog file: %s', filename)
+            # Load the extension file
+            await self.load_extension(f'ext.{filename[:-3]}')
+            log.info('Loading: %s', filename)

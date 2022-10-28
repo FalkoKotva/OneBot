@@ -35,7 +35,7 @@ def list_cogs() -> list[str]:
         list[str]: List of cog filenames.
     """
     return [
-        filename for filename in os.listdir('./src/cogs')
+        filename for filename in os.listdir('./src/ext')
         if filename.endswith('.py') and not filename.startswith('__')
     ]
 

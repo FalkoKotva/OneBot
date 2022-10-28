@@ -17,7 +17,7 @@ from . import BaseCog
 log = logging.getLogger(__name__)
 pronoun_map = {
             "unspecified": 
-                "unspecified, (this could be because they " \
+                "unspecified,\n(this could be because they " \
                 "haven't set their pronouns yet)",
             "hh": "he/him",
             "hi": "he/it",
@@ -110,7 +110,7 @@ class PronounCog(BaseCog, name="Pronouns"):
         pronouns = await self.get_pronouns(member)
 
         await inter.response.send_message(
-            f"{member.mention} pronouns are {pronouns}",
+            f'{member.mention} pronouns are "{pronouns}"',
             ephemeral=True
         )
 

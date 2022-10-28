@@ -22,4 +22,4 @@ class BaseCog(commands.Cog):
         Logs a ready message.
         """
 
-        log.info('Loaded Cog (NAME: %s)', self.qualified_name)
+        log.info(f"Cog loaded: {self.qualified_name}")
