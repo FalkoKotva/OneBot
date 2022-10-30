@@ -14,7 +14,7 @@ from constants import ChannelPurposes
 from db import db
 from ._get import Get
 from ._logs import setup_logs
-from .cog_manager import CogManager
+from ._ext import CogManager
 
 
 log = logging.getLogger(__name__)

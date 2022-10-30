@@ -91,7 +91,7 @@ class CogManager(BaseCog, name='Cog Manager'):
             ephemeral=True
         )
 
-    @group.command(name='load')
+    # @group.command(name='load')
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def load_cog(
         self,
@@ -110,7 +110,7 @@ class CogManager(BaseCog, name='Cog Manager'):
             func=_load
         )
 
-    @group.command(name='unload')
+    # @group.command(name='unload')
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def unload_cog(
         self,
@@ -129,7 +129,7 @@ class CogManager(BaseCog, name='Cog Manager'):
             func=_unload
         )
     
-    @group.command(name='reload')
+    # @group.command(name='reload')
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def reload_cog(
         self,
@@ -148,7 +148,7 @@ class CogManager(BaseCog, name='Cog Manager'):
             func=_reload
         )
 
-    @group.command(name='list')
+    # @group.command(name='list')
     async def list_cogs(self, inter:Inter):
         """Responds with a list of all cogs."""
 
