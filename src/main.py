@@ -12,7 +12,7 @@ async def main():
     with open('TOKEN', 'r', encoding='utf-8') as file:
         token = file.read()
 
-    # Construct the bot, load the cogs and start er up.
+    # Construct the bot, load the extensions and start er up.
     async with Bot() as bot:
         await bot.load_extensions()
         await bot.start(token, reconnect=True)
