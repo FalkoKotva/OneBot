@@ -131,7 +131,6 @@ class LevelCog(BaseCog, name='Level Progression'):
             "WHERE member_id=? AND guild_id=?",
             exp, member.id, member.guild.id
         )
-        db.commit()
 
         log.info('Updated exp for %s to %s', member, exp)
 
@@ -199,7 +198,6 @@ class LevelCog(BaseCog, name='Level Progression'):
             "INSERT INTO member_levels(member_id, guild_id) VALUES(?, ?)",
             member.id, member.guild.id
         )
-        db.commit()
 
         log.debug("Completed registration")
 

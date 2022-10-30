@@ -68,7 +68,6 @@ class GuildsCog(BaseCog, name="Guild Integrations"):
                 f"INSERT INTO {table} VALUES (?, ?, ?)",
                 _object.id, _object.guild.id, purpose.value
             )
-            db.commit()
             return True
         except sqlite3.IntegrityError:
             return False
@@ -84,7 +83,6 @@ class GuildsCog(BaseCog, name="Guild Integrations"):
             f"DELETE FROM {table} WHERE {column_prefix}_id = ?",
             _object.id
         )
-        db.commit()
 
     @channel_group.command(name="list")
     async def list_channels(self, inter:Inter):

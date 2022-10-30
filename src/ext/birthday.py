@@ -265,7 +265,6 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             "DELETE FROM user_birthdays WHERE user_id = ?",
             inter.user.id
         )
-        db.commit()
 
         log.info('Birthday removed for %s', inter.user.display_name)
 
