@@ -51,7 +51,28 @@ class ListMutedEmbed(discord.Embed):
 
         self.description.format(desc)
 
-class SetPronounsEmbed(discord.Embed):
+
+class HelpGetPronounsEmbed(discord.Embed):
+    """Embed for explaining how to get a member's pronouns"""
+
+    def __init__(self):
+        super().__init__(
+            title="How to get someone's pronouns",
+            colour=discord.Colour.red()
+        )
+
+        log.debug("Creating GetPronounsEmbed")
+
+        self.description = \
+            "To get someones's pronouns, you need to:" \
+            "\n\n**1.** Use the following command\n*`/pronouns get`*" \
+            "\n\n**2.** Mention the user you want to get the " \
+            "the pronouns for\n*(e.g. `/pronouns get @xord`)*" \
+            "\n\n**3.** All done, I will respond with that " \
+            "person's pronouns!"
+
+
+class HelpSetPronounsEmbed(discord.Embed):
     """Embed for explaining how to set your pronouns with PronounDB"""
 
     def __init__(self):

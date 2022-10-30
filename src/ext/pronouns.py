@@ -10,7 +10,7 @@ from discord import (
 )
 
 from constants import PRONOUNDB_GET_URL
-from ui import SetPronounsEmbed
+from ui import HelpSetPronounsEmbed
 from . import BaseCog
 
 
