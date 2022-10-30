@@ -1,6 +1,7 @@
 """Contains base cog for all cogs to inherit from."""
 
 import logging
+import asyncio
 
 from discord.ext import commands
 
@@ -21,5 +22,10 @@ class BaseCog(commands.Cog):
         Method called when the cog has been loaded.
         Logs a ready message.
         """
+
+        # Add the cog to the bot's list of cogs
+        event = self.bot.cog_events[self.qualified_name] = asyncio.Event()
+        event.set()
+        
 
         log.info(f"Cog loaded: {self.qualified_name}")
