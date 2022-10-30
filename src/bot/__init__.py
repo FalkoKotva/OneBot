@@ -3,8 +3,9 @@
 import os
 import time
 import logging
+import asyncio
 from sqlite3 import IntegrityError
-from datetime import timedelta, time as dt_time
+from datetime import timedelta
 
 import discord
 from discord.ext import commands, tasks
@@ -26,7 +27,8 @@ class Bot(commands.Bot):
         "_start_time",
         "log_filepath",
         "get",
-        
+        "cog_events",
+        "all_cogs_loaded",
         "commands_synced"
     )
 
@@ -45,13 +47,28 @@ class Bot(commands.Bot):
         self.get: Get = Get(self)
         self.log_filepath = setup_logs()
         self.commands_synced = False
+
+        # Event that can be used to await for all cogs to be loaded
+        self.all_cogs_loaded = asyncio.Event()
+        self.cog_events = {}
  
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=10)
     async def _autosave_db(self):
         """Autosave the database"""
 
         log.info("Autosaving database")
         db.commit()
+
+    async def _determine_loaded_cogs(self):
+        """Determine which cogs are loaded"""
+
+        log.info("Determining loaded cogs")
+
+        await asyncio.gather(
+            *[event.wait() for event in self.cog_events.values()]
+        )
+        await self.wait_until_ready()
+        self.all_cogs_loaded.set()
 
     @property
     def uptime(self) -> timedelta:
@@ -155,30 +172,41 @@ class Bot(commands.Bot):
         log.debug("Removed guild %s from the database", guild.name)
 
     async def on_ready(self) -> None:
+        """Handles tasks that require the bot to be ready first.
+
+        This is called when the bot is ready by discord.py
         """
-        Called when the bot logs in.
-        Syncs slash commands and prints a ready message.
-        """
 
-        # Sync the bot guilds
-        await self.sync_guilds()
+        log.info("Bot has logged-in and is ready!")
+        log.debug(
+            f"Name: %s - ID: %s",
+            self.user.name,
+            self.user.id
+        )
 
-        # Sync app commands with discord
-        await self.sync_app_commands()
-
-        # Start the database autosave task
-        log.debug("Started autosave task")
-        self._autosave_db.start()
-
-        log.info('Logged in as %s (ID: %s)', self.user, self.user.id)
-
-        # Send a ready message to all logging channels
         await self.send_logs('**I\'m back online!**')
 
-    async def close(self):
-        """Handles the shutdown process of the bot"""
+        # Schedule bot tasks
+        self._autosave_db.start()
+        self.loop.create_task(self._determine_loaded_cogs())
 
-        log.info('Shutting down...')
+        # Sync the guilds with the db and the app commands with discord
+        await self.sync_guilds()
+        await self.sync_app_commands()
+
+        log.info("Bot startup tasks complete")
+
+    async def close(self):
+        """Takes care of some final tasks before closing the bot
+
+        This is called when the bot is closed by discord.py
+        """
+
+        # IMPORTANT: without this commit all changes will be lost
+        db.commit(); log.debug("Final database commit")
+
+        log.info("I'm going to sleep now, bye bye!")
+
         filename = os.path.basename(self.log_filepath)
 
         # Send a ready message to all logging channels
