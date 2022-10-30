@@ -12,7 +12,8 @@ from .embeds import (
     SetChannelEmbed,
     ListConfiguredChannelsEmbed,
     ListMutedEmbed,
-    SetPronounsEmbed
+    HelpSetPronounsEmbed,
+    HelpGetPronounsEmbed
 )
 from .views import EmbedPageView, ExpClusterView
 from .levelcards import LevelCard
