@@ -287,6 +287,7 @@ class BirthdayCog(BaseCog, name='Birthdays'):
             await inter.response.send_message(
                 'I don\'t know this birthday, sorry!'
                 '\nYou can save yours with `/birthday save`',
+                ephemeral=True
             )
             return
 
