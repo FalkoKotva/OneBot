@@ -118,8 +118,6 @@ class Bot(commands.Bot):
                 )
                 continue
 
-            db.commit()
-
     async def send_logs(self, msg:str, include_file:bool=False) -> None:
         """Send a message to all purposed log channels
 
@@ -163,13 +161,12 @@ class Bot(commands.Bot):
 
         log.info('Left guild %s', guild.name)
 
-        db.execute(
-            "DELETE FROM guilds WHERE guild_id = ?",
-            guild.id
-        )
-        db.commit()
+        # db.execute(
+        #     "DELETE FROM guilds WHERE guild_id = ?",
+        #     guild.id
+        # )
 
-        log.debug("Removed guild %s from the database", guild.name)
+        # log.info("Removed guild %s from the database", guild.name)
 
     async def on_ready(self) -> None:
         """Handles tasks that require the bot to be ready first.
@@ -202,10 +199,11 @@ class Bot(commands.Bot):
         This is called when the bot is closed by discord.py
         """
 
-        # IMPORTANT: without this commit all changes will be lost
-        db.commit(); log.debug("Final database commit")
+        log.info("I am now shutting down")
 
-        log.info("I'm going to sleep now, bye bye!")
+        # IMPORTANT: without this commit all changes will be lost
+        db.commit()
+        log.debug("Final database commit complete")
 
         filename = os.path.basename(self.log_filepath)
 
@@ -231,7 +229,7 @@ class Bot(commands.Bot):
 
             # Skip non cog files
             if not filename.endswith('.py') or filename.startswith('_'):
-                log.debug(
+                log.info(
                     "File \"%s\" is not an extension, skipping",
                     filename
                 )
