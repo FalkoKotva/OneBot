@@ -26,7 +26,7 @@ class Welcome(BaseCog):
             "SELECT channel_id FROM guild_channels " \
             "WHERE guild_id = ? AND purpose_id = ?",
             guild_id, purpose_id
-        )
+        ) or 0  # Snowflake 0 is valid but NoneType is not
         channel = await self.bot.get.channel(channel_id)
         return channel
 

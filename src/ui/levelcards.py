@@ -1,7 +1,6 @@
 """Levelcards module. Contains the Levelcard class and related functions."""
 
 import logging
-from dataclasses import dataclass
 
 from discord import Status, Colour, Member, File
 from easy_pil import (
@@ -13,7 +12,6 @@ from easy_pil import (
 from PIL import Image
 
 from db import MemberLevelModel
-from utils import abbreviate_num
 from constants import (
     WHITE,
     BLACK,
@@ -75,11 +73,42 @@ def get_colours(dark_mode:bool) -> tuple[str, str, str, str]:
 class ScoreBoard:
     """Scoreboard class. Creates a scoreboard image for each member"""
 
-    __slots__ = ()
-    _scoreboard: Editor
+    # __slots__ = ("members",)
+    scoreboard: Editor
 
-    def __init__(self, members:tuple[Member]):
-        pass
+    def __init__(self, members:tuple[tuple[Member, MemberLevelModel]]):
+        self.members = members
+
+    async def draw(self):
+        """Draw the scoreboard"""
+
+        log.info("Drawing scoreboard")
+
+        self.scoreboard = Editor(Canvas((900, 200*5)))
+
+        for index, (member, lvl_obj) in enumerate(self.members):
+            level_card = LevelCard(member, lvl_obj)
+            await level_card.draw()
+            self.scoreboard.paste(level_card.image, (0, 200*(index+1)))
+
+    def get_file(self, filename:str=None) -> File:
+        """Get the card as a discord.File object. Filename defaults to
+        "<memberid>_levelcard.png"
+
+        Args:
+            filename (str, optional): Overwrite the default filename.
+
+        Returns:
+            discord.File: The card as a discord.File
+        """
+
+        log.debug("Getting scoreboard as file")
+
+        return File(
+            self.scoreboard.image_bytes,
+            filename=filename or "onebot_scoreboard.png",
+            description="scoreboard created by OneBot."
+        )
 
 
 class LevelCard:

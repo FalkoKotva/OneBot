@@ -11,6 +11,7 @@ from discord.ext import commands
 
 from db import db, MemberLevelModel
 from ui import LevelCard
+from ui.levelcards import ScoreBoard
 from utils import is_bot_owner
 from exceptions import EmptyQueryResult
 from . import BaseCog
@@ -180,38 +181,56 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Scoreboard command triggered")
 
-        # Create the embed
-        embed = discord.Embed(
-            title="Top 5 members",
-            description="The top 5 members by rank",
-            color=discord.Color.blurple()
-        )
+        await inter.response.defer(ephemeral=ephemeral)
 
-        level_objects = (
-            MemberLevelModel.from_database(member.id, inter.guild.id)
-            for member in inter.guild.members[:4] if not member.bot
-        )
-
-        if not level_objects:
-            await inter.response.send_message(
-                "No users to check.",
-                ephemeral=ephemeral
+        members = [
+            (
+                await self.bot.get.member(member_id, inter.guild.id),
+                MemberLevelModel(member_id, inter.guild.id, xp)
             )
-            return
-
-        level_objects = sorted(level_objects, key=lambda x: x.rank)
-
-        # Add the fields
-        for lvl_obj in level_objects:
-            member = await self.bot.get.member(lvl_obj.member_id, inter.guild.id)
-            embed.add_field(
-                name=f"{lvl_obj.rank}. {member}",
-                value=f"Level: {lvl_obj.level}\nExp: {lvl_obj.xp}/{lvl_obj.next_xp}",
-                inline=False
+            for member_id, xp in db.records(
+                "SELECT member_id, experience FROM member_levels "
+                "WHERE guild_id=? ORDER BY experience DESC LIMIT 5",
+                inter.guild.id
             )
+        ]
 
-        # Send the embed
-        await inter.response.send_message(embed=embed, ephemeral=ephemeral)
+        scoreboard = ScoreBoard(members)
+        await scoreboard.draw()
+        await inter.followup.send(file=scoreboard.get_file())
+
+        # # Create the embed
+        # embed = discord.Embed(
+        #     title="Top 5 members",
+        #     description="The top 5 members by rank",
+        #     color=discord.Color.blurple()
+        # )
+
+        # level_objects = (
+        #     MemberLevelModel.from_database(member.id, inter.guild.id)
+        #     for member in inter.guild.members[:4] if not member.bot
+        # )
+
+        # if not level_objects:
+        #     await inter.response.send_message(
+        #         "No users to check.",
+        #         ephemeral=ephemeral
+        #     )
+        #     return
+
+        # level_objects = sorted(level_objects, key=lambda x: x.rank)
+
+        # # Add the fields
+        # for lvl_obj in level_objects:
+        #     member = await self.bot.get.member(lvl_obj.member_id, inter.guild.id)
+        #     embed.add_field(
+        #         name=f"{lvl_obj.rank}. {member}",
+        #         value=f"Level: {lvl_obj.level}\nExp: {lvl_obj.xp}/{lvl_obj.next_xp}",
+        #         inline=False
+        #     )
+
+        # # Send the embed
+        # await inter.response.send_message(embed=embed, ephemeral=ephemeral)
 
     async def send_levelboard(
         self,
