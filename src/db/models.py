@@ -9,6 +9,7 @@ from discord.ext.commands import Bot
 
 from . import db
 from utils import abbreviate_num
+from exceptions import EmptyQueryResult
 
 
 log = logging.getLogger(__name__)
@@ -51,13 +52,16 @@ class MemberLevelModel:
 
     @property
     def rank(self) -> int:
-        """Get the member rank"""
+        """Get the member rank"""  # BUG: always returns 1, because of the way the query is written
 
         log.debug("Getting member rank")
         rank = db.field(
-            "SELECT ROW_NUMBER() OVER( ORDER BY experience ) " \
-            "FROM member_levels " \
-            "WHERE guild_id = ? AND member_id = ?",
+            """SELECT rank FROM (
+             SELECT member_id, RANK() OVER ( ORDER BY experience DESC )
+             AS rank
+             FROM member_levels WHERE guild_id = ?
+            ) WHERE member_id = ?
+            """,
             self.guild_id, self.member_id
         )
         if rank is None:
@@ -76,7 +80,10 @@ class MemberLevelModel:
             member_id, guild_id
         )
         if not xp:
-            raise ValueError("No data found for member in guild")
+            raise EmptyQueryResult(
+                "There is no data for member with id "
+                f"{member_id} in guild with id {guild_id}"
+            )
 
         return cls(member_id, guild_id, xp)
 

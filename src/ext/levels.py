@@ -12,6 +12,7 @@ from discord.ext import commands
 from db import db, MemberLevelModel
 from ui import LevelCard
 from utils import is_bot_owner
+from exceptions import EmptyQueryResult
 from . import BaseCog
 
 
@@ -27,7 +28,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         # Create the context menu for the rank cmd
         rank_menu = app_commands.ContextMenu(
             name="Get Rank",
-            callback=self.context_see_member_levelboard,
+            callback=self.get_levelcard_ctxmenu,
         )
         self.bot.tree.add_command(rank_menu)
 
@@ -43,75 +44,18 @@ class LevelCog(BaseCog, name='Level Progression'):
         """Event to add new members to the rank database"""
         self.register_member(member)
 
-    def calc_level(self, exp:float) -> float:
-        """Calculate the level from the given exp"""
+    @commands.Cog.listener(name="on_member_remove")
+    async def remove_member(self, member:discord.Member):
+        """Event to remove members from the rank database"""
 
-        return 0.07 * sqrt(exp)
+        log.debug("Removing member %s", member)
 
-    def calc_exp(self, level:float) -> float:
-        """Calculate the exp for the given level"""
-
-        return (level / 0.07) ** 2
-
-    def calc_next_exp(self, level:float) -> float:
-        """Calculate the next level exp from the given level"""
-
-        return (ceil(level) / 0.07) ** 2
-
-    async def get_level_for(
-        self, member:discord.Member, guild_id:int
-    ) -> Tuple[float, float, float, int]:
-        """Get level data for the given member
-
-        Args:
-            member (discord.Member): _description_
-
-        Returns:
-            Tuple[float, float, float, int]: The lvl data for the member
-        """
-
-        level_object = MemberLevelModel.from_database(
-            member.id, guild_id
-        )
-        return (
-            level_object.level,
-            level_object.xp,
-            level_object.next_xp,
-            level_object.rank
+        db.execute(
+            "DELETE FROM member_levels WHERE member_id=? AND guild_id=?",
+            member.id, member.guild.id
         )
 
-        # # Get their data from the database
-        # data = db.records(
-        #     "SELECT * FROM member_levels WHERE guild_id=?",
-        #     guild_id
-        # )
-
-        # # We can't continue if there is no data
-        # if not data:
-        #     return
-
-        # # Order the data by exp
-        # data = sorted(data, key=lambda x: x[-1], reverse=True)
-
-        # # Find the rank of the member
-        # for rank, record in enumerate(data):
-        #     if record[1] == member.id:
-        #         break
-
-        # # pylint: disable=undefined-loop-variable
-        # # ^ False-positive: if there is no data we return early
-
-        # # Get the level data
-        # exp = record[-1]
-        # level = self.calc_level(exp)
-        # next_exp = self.calc_next_exp(level)
-
-        # return (
-        #     level + 1,  # Otherwise lvl calculation is 1 behind
-        #     exp - 1,  # Otherwise exp calculation is 1 ahead
-        #     next_exp - 1,  # Otherwise next_exp calculation is 1 ahead
-        #     rank + 1  # Otherwise rank calculation is 1 behind
-        # )
+        log.debug("Completed removal")
 
     async def gain_exp(self, member:discord.Member, amount:int):
         """Gives the given member the given amount of exp"""
@@ -212,14 +156,19 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Completed registration")
 
-    async def validate_members(self):
+    async def validate_members(self, guild:discord.Guild=None):
         """Iterate through all members in the guild and add them to
-        the rank database if they aren't in it"""
+        the rank database if they aren't in it.
+
+        Will only validate members in the given guild if one is given.
+        """
 
         log.debug("Validating members")
 
+        guilds = (guild,) or self.bot.guilds
+
         i = 0
-        for guild in self.bot.guilds:
+        for guild in guilds:
             for i, member in enumerate(guild.members):
                 self.register_member(member)
 
@@ -238,26 +187,26 @@ class LevelCog(BaseCog, name='Level Progression'):
             color=discord.Color.blurple()
         )
 
-        data = [
-            (member.id,) + await self.get_level_for(member, inter.guild.id) \
-            for member in inter.guild.members
-        ]
+        level_objects = (
+            MemberLevelModel.from_database(member.id, inter.guild.id)
+            for member in inter.guild.members[:4] if not member.bot
+        )
 
-        if not data:
+        if not level_objects:
             await inter.response.send_message(
                 "No users to check.",
                 ephemeral=ephemeral
             )
             return
 
-        data = sorted(data, key=lambda x: x[-1])
+        level_objects = sorted(level_objects, key=lambda x: x.rank)
 
         # Add the fields
-        for member_id, level, exp, next_exp, rank in data[:5]:
-            member = await self.bot.get.member(member_id, inter.guild.id)
+        for lvl_obj in level_objects:
+            member = await self.bot.get.member(lvl_obj.member_id, inter.guild.id)
             embed.add_field(
-                name=f"{rank}. {member}",
-                value=f"Level: {level}\nExp: {exp}/{next_exp}",
+                name=f"{lvl_obj.rank}. {member}",
+                value=f"Level: {lvl_obj.level}\nExp: {lvl_obj.xp}/{lvl_obj.next_xp}",
                 inline=False
             )
 
@@ -267,10 +216,18 @@ class LevelCog(BaseCog, name='Level Progression'):
     async def send_levelboard(
         self,
         inter:Inter,
-        member:discord.Member,
+        member:discord.Member | None,
         ephemeral:bool
     ) -> None:
         """Responds to the given interaction with the levelboard"""
+
+        # The interaction member does not have a status
+        # which is needed for the level card, so we need
+        # to get the member from the guild again.
+        member = member or inter.user
+        member = await self.bot.get.member(
+            member.id, inter.guild.id
+        )
 
         log.debug('%s is checking the rank of %s', inter.user, member)
 
@@ -279,24 +236,29 @@ class LevelCog(BaseCog, name='Level Progression'):
         if member.bot:
             log.debug("Member is a bot, not sending levelboard")
             await inter.followup.send(
-                f"Sorry, {member.display_name} is a bot and can't have a rank!",
+                f"Sorry, {member.display_name} is a bot "
+                "and can't have a rank!",
                 ephemeral=ephemeral
             )
             return
 
         try:
-            level_object = MemberLevelModel.from_database(member.id, inter.guild.id)
-        except Exception as err:
+            # Create the level object from the database
+            level_object = MemberLevelModel.from_database(
+                member.id, inter.guild.id
+            )
+
+        except EmptyQueryResult as err:
             log.error(err)
+            await self.register_member(member)
             await inter.followup.send(
-                "Your levels are not being tracked, " \
-                "contact an administrator",
+                f"I couldn't find {member.mention} in the database."
+                "\nI've corrected this now, please try again.",
                 ephemeral=True
             )
             return
 
         # Create the level card
-        member = await self.bot.get.member(member.id, inter.guild.id)
         levelcard = LevelCard(member, level_object)
         await levelcard.draw()
 
@@ -311,7 +273,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         member="The member to see the rank of",
         ephemeral="Hide the bot response from other users"
     )
-    async def see_member_levelboard(
+    async def get_levelcard_cmd(
         self,
         inter:Inter,
         member:discord.Member=None,
@@ -319,11 +281,9 @@ class LevelCog(BaseCog, name='Level Progression'):
     ):
         """Get the levelboard of a server member"""
 
-        # Default to the command author if no member is given
-        member = member or inter.user
         await self.send_levelboard(inter, member, ephemeral)
 
-    async def context_see_member_levelboard(self, inter:Inter, member:discord.Member):
+    async def get_levelcard_ctxmenu(self, inter:Inter, member:discord.Member):
         """Context menu version of see_member_levelboard"""
 
         await self.send_levelboard(inter, member, ephemeral=True)

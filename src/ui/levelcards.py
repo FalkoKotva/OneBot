@@ -357,7 +357,7 @@ class LevelCard:
                     color=self._foreground_1
                 ),
                 Text(
-                    f"/ {self.lvl_obj.next_xp}XP",
+                    f"/ {self.lvl_obj.next_xp} XP",
                     font=POPPINS_SMALL,
                     color=self._foreground_2
                 )
@@ -419,11 +419,12 @@ class LevelCard:
             discord.File: The card as a discord.File
         """
 
-        filename = filename or f"{self.member.id}_levelcard.png"
         return File(
             self.card.image_bytes,
-            filename=filename,
-            description=f"Level card for {self.member.name}"
+            filename=filename or "onebot_levelcard.png",
+            description=
+                f"A level card image for {self.member.display_name} "
+                "created by OneBot."
         )
 
     @property

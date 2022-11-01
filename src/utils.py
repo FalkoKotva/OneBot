@@ -84,7 +84,7 @@ def abbreviate_num(num:float) -> str:
     """
 
     if num < 1000:
-        return str(num)
+        return str(floor(num))
 
     out = int(floor(mlog(num, 1000)))
     suffixes = 'KMBT'
