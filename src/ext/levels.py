@@ -197,7 +197,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         scoreboard = ScoreBoard(members)
         await scoreboard.draw()
-        await inter.followup.send(file=scoreboard.get_file())
+        await inter.followup.send(file=scoreboard.get_file(), ephemeral=ephemeral)
 
         # # Create the embed
         # embed = discord.Embed(

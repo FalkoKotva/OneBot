@@ -84,7 +84,7 @@ class ScoreBoard:
 
         log.info("Drawing scoreboard")
 
-        self.scoreboard = Editor(Canvas((900, 200*6)))
+        self.scoreboard = Editor(Canvas((900, 200*(len(self.members)+1))))
 
         for index, (member, lvl_obj) in enumerate(self.members):
             level_card = LevelCard(member, lvl_obj)
