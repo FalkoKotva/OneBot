@@ -9,15 +9,10 @@ from discord import Interaction as Inter
 from discord.ext import commands
 
 from ext import BaseCog
-from utils import list_cogs, to_choices
+from utils import list_cogs, to_choices, is_bot_owner
 
 
 log = logging.getLogger(__name__)
-
-async def is_owner(inter:Inter):
-    """Checks if the user is the owner of the bot"""
-
-    return await inter.client.is_owner(inter.user)
 
 
 class CogManager(BaseCog, name='Cog Manager'):
@@ -97,7 +92,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         )
 
     @group.command(name='load')
-    @app_commands.check(is_owner)
+    @app_commands.check(is_bot_owner)
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def load_cog(
         self,
@@ -117,7 +112,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         )
 
     @group.command(name='unload')
-    @app_commands.check(is_owner)
+    @app_commands.check(is_bot_owner)
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def unload_cog(
         self,
@@ -137,7 +132,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         )
     
     @group.command(name='reload')
-    @app_commands.check(is_owner)
+    @app_commands.check(is_bot_owner)
     @app_commands.choices(cog=to_choices(list_cogs()))
     async def reload_cog(
         self,
@@ -157,7 +152,7 @@ class CogManager(BaseCog, name='Cog Manager'):
         )
 
     @group.command(name='list')
-    @app_commands.check(is_owner)
+    @app_commands.check(is_bot_owner)
     async def list_cogs(self, inter:Inter):
         """Responds with a list of all cogs."""
 

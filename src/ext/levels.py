@@ -11,6 +11,7 @@ from discord.ext import commands
 
 from db import db
 from ui import LevelCard
+from utils import is_bot_owner
 from . import BaseCog
 
 
@@ -351,6 +352,17 @@ class LevelCog(BaseCog, name='Level Progression'):
         await inter.response.send_message(
             "Validation Complete!",
             ephemeral=True
+        )
+
+    @admin_group.command(name="add-xp")
+    @app_commands.check(is_bot_owner)
+    async def add_xp_cmd(self, inter:Inter, target:discord.Member, xp:int):
+        """Add xp to a member, only the bot owner can use this"""
+
+        await self.gain_exp(target, xp)
+
+        await inter.response.send_message(
+            f"Added {xp} xp to {target.mention}",
         )
 
 

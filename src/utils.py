@@ -50,12 +50,10 @@ def to_choices(string_list:list[str]) -> list[app_commands.Choice[str]]:
         for i in string_list
     ]
 
-def check_is_owner(inter:Inter) -> bool:
-    """Check if the user is the owner of the bot."""
+async def is_bot_owner(inter:Inter):
+    """Checks if the user is the owner of the bot"""
 
-    result = inter.user.id == 377453890523627522
-    log.debug(f'Checking if user ({inter.user.id}) is owner {result}')
-    return result
+    return await inter.client.is_owner(inter.user)
 
 def is_admin(inter:Inter, bot) -> bool:
     """Returns bool if member has admin role"""
