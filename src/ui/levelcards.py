@@ -1,6 +1,7 @@
 """Levelcards module. Contains the Levelcard class and related functions."""
 
 import logging
+from dataclasses import dataclass
 
 from discord import Status, Colour, Member, File
 from easy_pil import (
@@ -10,6 +11,8 @@ from easy_pil import (
     load_image_async
 )
 from PIL import Image
+
+from db import MemberLevelModel
 from utils import abbreviate_num
 from constants import (
     WHITE,
@@ -69,6 +72,16 @@ def get_colours(dark_mode:bool) -> tuple[str, str, str, str]:
     return WHITE, LIGHT_GREY, BLACK, DARK_GREY
 
 
+class ScoreBoard:
+    """Scoreboard class. Creates a scoreboard image for each member"""
+
+    __slots__ = ()
+    _scoreboard: Editor
+
+    def __init__(self, members:tuple[Member]):
+        pass
+
+
 class LevelCard:
     """A ranking card for members"""
 
@@ -77,6 +90,8 @@ class LevelCard:
 
     card: Editor
     is_darkmode: bool
+    lvl_obj: MemberLevelModel
+    member: Member
 
     # Colours
     _foreground_1: str
@@ -86,21 +101,8 @@ class LevelCard:
     _accent_colour:str
     _status_colour:str
 
-    # Values
-    member: Member
-    rank: int
-    exp: int
-    next_exp: int
-    level: int
-
     def __init__(
-        self,
-        member: Member,
-        rank: int,
-        exp: int,
-        next_exp: int,
-        level: int,
-        is_darkmode: bool
+        self, member:Member, lvl_obj:MemberLevelModel, is_darkmode:bool=True
     ):
         """Create a new LevelCard
 
@@ -112,13 +114,10 @@ class LevelCard:
             dark_mode (bool): Whether the card is in dark mode
         """
 
-        log.info("Creating new levelcard for %s", member)
+        log.info("Creating new levelcard")
 
         self.member = member
-        self.rank = rank
-        self.exp = exp
-        self.next_exp = next_exp
-        self.level = level
+        self.lvl_obj = lvl_obj
         self.is_darkmode = is_darkmode
 
     async def draw(self):
@@ -285,7 +284,7 @@ class LevelCard:
 
         log.debug("Drawing progress bar")
 
-        percentage = (self.exp / self.next_exp) * 100
+        percentage = (self.lvl_obj.xp_raw / self.lvl_obj.next_xp_raw) * 100
         percentage = max(percentage, 5)  # <10 causes visual issues
 
         # Bar dimensions
@@ -347,22 +346,18 @@ class LevelCard:
 
         log.debug("Drawing exp text")
 
-        # Abbreviate the exp and next exp
-        exp = abbreviate_num(self.exp)
-        next_exp = f"/ {abbreviate_num(self.next_exp)} XP"
-
         # Draw it right onto the card
         self.card.multi_text(
             position=(1740, 225),  # bottom right
             align="right",
             texts=(
                 Text(
-                    exp,
+                    self.lvl_obj.xp,
                     font=POPPINS_SMALL,
                     color=self._foreground_1
                 ),
                 Text(
-                    next_exp,
+                    f"/ {self.lvl_obj.next_xp}XP",
                     font=POPPINS_SMALL,
                     color=self._foreground_2
                 )
@@ -384,7 +379,7 @@ class LevelCard:
                     color=self._foreground_2
                 ),
                 Text(
-                    f"#{self.rank} ",
+                    f"#{self.lvl_obj.rank} ",
                     font=POPPINS,
                     color=self._accent_colour
                 ),
@@ -394,7 +389,7 @@ class LevelCard:
                     color=self._foreground_2
                 ),
                 Text(
-                    str(self.level),
+                    str(self.lvl_obj.level),
                     font=POPPINS,
                     color=self._accent_colour
                 )

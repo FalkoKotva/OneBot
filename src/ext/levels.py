@@ -9,7 +9,7 @@ from discord import app_commands
 from discord import Interaction as Inter
 from discord.ext import commands
 
-from db import db
+from db import db, MemberLevelModel
 from ui import LevelCard
 from utils import is_bot_owner
 from . import BaseCog
@@ -70,38 +70,48 @@ class LevelCog(BaseCog, name='Level Progression'):
             Tuple[float, float, float, int]: The lvl data for the member
         """
 
-        # Get their data from the database
-        data = db.records(
-            "SELECT * FROM member_levels WHERE guild_id=?",
-            guild_id
+        level_object = MemberLevelModel.from_database(
+            member.id, guild_id
         )
-
-        # We can't continue if there is no data
-        if not data:
-            return
-
-        # Order the data by exp
-        data = sorted(data, key=lambda x: x[-1], reverse=True)
-
-        # Find the rank of the member
-        for rank, record in enumerate(data):
-            if record[1] == member.id:
-                break
-
-        # pylint: disable=undefined-loop-variable
-        # ^ False-positive: if there is no data we return early
-
-        # Get the level data
-        exp = record[-1]
-        level = self.calc_level(exp)
-        next_exp = self.calc_next_exp(level)
-
         return (
-            level + 1,  # Otherwise lvl calculation is 1 behind
-            exp - 1,  # Otherwise exp calculation is 1 ahead
-            next_exp - 1,  # Otherwise next_exp calculation is 1 ahead
-            rank + 1  # Otherwise rank calculation is 1 behind
+            level_object.level,
+            level_object.xp,
+            level_object.next_xp,
+            level_object.rank
         )
+
+        # # Get their data from the database
+        # data = db.records(
+        #     "SELECT * FROM member_levels WHERE guild_id=?",
+        #     guild_id
+        # )
+
+        # # We can't continue if there is no data
+        # if not data:
+        #     return
+
+        # # Order the data by exp
+        # data = sorted(data, key=lambda x: x[-1], reverse=True)
+
+        # # Find the rank of the member
+        # for rank, record in enumerate(data):
+        #     if record[1] == member.id:
+        #         break
+
+        # # pylint: disable=undefined-loop-variable
+        # # ^ False-positive: if there is no data we return early
+
+        # # Get the level data
+        # exp = record[-1]
+        # level = self.calc_level(exp)
+        # next_exp = self.calc_next_exp(level)
+
+        # return (
+        #     level + 1,  # Otherwise lvl calculation is 1 behind
+        #     exp - 1,  # Otherwise exp calculation is 1 ahead
+        #     next_exp - 1,  # Otherwise next_exp calculation is 1 ahead
+        #     rank + 1  # Otherwise rank calculation is 1 behind
+        # )
 
     async def gain_exp(self, member:discord.Member, amount:int):
         """Gives the given member the given amount of exp"""
@@ -216,7 +226,7 @@ class LevelCog(BaseCog, name='Level Progression'):
             log.debug("Validated %s members for %s", i, guild.name)
 
     @app_commands.command(name="scoreboard")
-    async def see_scoreboard(self, inter:Inter):
+    async def see_scoreboard(self, inter:Inter, ephemeral:bool=False):
         """Get a scoreboard of the top 5 members by rank"""
 
         log.debug("Scoreboard command triggered")
@@ -236,7 +246,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         if not data:
             await inter.response.send_message(
                 "No users to check.",
-                ephemeral=True
+                ephemeral=ephemeral
             )
             return
 
@@ -244,7 +254,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         # Add the fields
         for member_id, level, exp, next_exp, rank in data[:5]:
-            member = await self.bot.get.member(member_id)
+            member = await self.bot.get.member(member_id, inter.guild.id)
             embed.add_field(
                 name=f"{rank}. {member}",
                 value=f"Level: {level}\nExp: {exp}/{next_exp}",
@@ -252,7 +262,7 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
 
         # Send the embed
-        await inter.response.send_message(embed=embed)
+        await inter.response.send_message(embed=embed, ephemeral=ephemeral)
 
     async def send_levelboard(
         self,
@@ -274,11 +284,10 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             return
 
-        # Get the level data for the member
-        level_data = await self.get_level_for(member, inter.guild.id)
-
-        # We can't continue if there is no data
-        if not level_data:
+        try:
+            level_object = MemberLevelModel.from_database(member.id, inter.guild.id)
+        except Exception as err:
+            log.error(err)
             await inter.followup.send(
                 "Your levels are not being tracked, " \
                 "contact an administrator",
@@ -286,26 +295,9 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             return
 
-        # Unpack the level data
-        level, exp, next_exp, rank = level_data
-
-        # We need to get the member again because the member object
-        # provided by the app command does not contain the member's
-        # status, which we need to draw the card.
-        guild = await self.bot.get.guild(inter.guild.id)
-        member = guild.get_member(member.id)
-
         # Create the level card
-        levelcard = LevelCard(
-            member=member,
-            level=int(level),
-            exp=int(exp),
-            next_exp=int(next_exp),
-            rank=rank,
-            is_darkmode=True
-        )
-
-        # Draw the card
+        member = await self.bot.get.member(member.id, inter.guild.id)
+        levelcard = LevelCard(member, level_object)
         await levelcard.draw()
 
         # All done! Send the card as a file.

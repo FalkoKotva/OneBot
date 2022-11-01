@@ -67,6 +67,7 @@ class Errors(BaseCog, name="errors"):
 			# Send the default error message and create an edit
 			# shorthand to add more details to the message once
 			# we've figured out what the error is.
+			log.error(error)
 			await self._respond_to_interaction(inter)
 			edit = lambda x: inter.edit_original_response(content=x)
 
@@ -85,7 +86,7 @@ class Errors(BaseCog, name="errors"):
 			# Some other error occurred while invoking the command.
 			await edit(
 				f"`{type(_err.original).__name__}` " \
-				f": {_err.original.text}"
+				f": {_err.original}"
 			)
 
 		except app_commands.CheckFailure as _err:
