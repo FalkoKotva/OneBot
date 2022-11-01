@@ -1,74 +1,57 @@
-"""Help cog for discord members who need help."""
+"""Extension to provide help commands."""
 
 import logging
 
 import discord
-from discord import app_commands
-from discord import Interaction as Inter
+from discord import (
+    app_commands,
+    Interaction as Inter
+)
+from discord.ext import commands
 
-from utils import normalized_name
-from ui import EmbedPageManager, HelpChannelsEmbed
+from ui import HelpSetPronounsEmbed, HelpGetPronounsEmbed
 from . import BaseCog
 
 
 log = logging.getLogger(__name__)
 
 
-class HelpCog(BaseCog):
-    """Help cog for discord members who need help."""
+class HelpCog(BaseCog, name="Help Commands"):
+    """Cog to provide help commands"""
 
-    # def __init__(self, bot):
-    #     super().__init__(bot)
+    __slots__ = ()
 
     group = app_commands.Group(
-        name='help',
-        description='help commands...'
+        name="help",
+        description="Get help with the bot"
     )
 
-    @group.command(name='channels')
-    async def channels(self, inter:Inter):
-        """Get a list of all channels and their topics"""
+    @group.command(name="pronouns")
+    async def pronoun_cmd(self, inter:Inter):
+        """Get information about pronouns usage with the bot"""
 
-        # Log the interaction including who used it
-        name = normalized_name(inter.user, with_id=False)
-        log.debug('%s requested help channels', name)
-
-        sorted_channels: list[list[discord.TextChannel]] = []
-        chars = 0  # The length of characters in the current page
-
-        for channel in inter.guild.text_channels:
-
-            log.debug('Checking channel: %s', channel.name)
-
-            # Add the character counts to determine if the page is full
-            chars += len(channel.name)
-            if channel.topic:
-                chars += len(channel.topic)
-
-            # If this page is full or there or no pages,
-            # create a new one
-            if chars > 900 or not sorted_channels:
-                sorted_channels.append([])
-                chars = 0
-
-            # Add the channel to the last page
-            sorted_channels[-1].append(channel)
-
-        # Create an embed for each page
-        all_embeds = (
-            HelpChannelsEmbed(channels) for channels in sorted_channels
+        await inter.response.send_message(
+            embeds=(
+                HelpSetPronounsEmbed(),
+                HelpGetPronounsEmbed()
+            ),
+            ephemeral=True
         )
 
-        # Create an object to manage the pages
-        multi_embed = EmbedPageManager()
-        multi_embed.add_embeds(*all_embeds)
+    # @group.command(name="birthdays")
+    async def birthday_cmd(self, inter:Inter):
+        """Get information about birthday commands with the bot"""
 
-        # Send the pages to the member
-        await multi_embed.send(inter)
+        await inter.response.send_message(
+            embeds=(
+                # TODO: Add birthday help embed  
+            ),
+            ephemeral=True
+        )
 
 
 async def setup(bot):
-    """Setup function"""
+    """Adds the cog to the bot."""
 
     cog = HelpCog(bot)
     await bot.add_cog(cog)
