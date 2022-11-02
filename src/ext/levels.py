@@ -190,7 +190,7 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             for member_id, xp in db.records(
                 "SELECT member_id, experience FROM member_levels "
-                "WHERE guild_id=? ORDER BY experience DESC LIMIT 5",
+                "WHERE guild_id=? ORDER BY experience DESC LIMIT 20",
                 inter.guild.id
             )
         ]
