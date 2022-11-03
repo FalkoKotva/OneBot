@@ -1,6 +1,7 @@
 """Level progression cog"""
 
 import logging
+from datetime import datetime, timedelta
 
 import discord
 from discord import app_commands
@@ -167,12 +168,25 @@ class LevelCog(BaseCog, name='Level Progression'):
             log.debug("Validated %s members for %s", i, guild.name)
 
     @app_commands.command(name="scoreboard")
-    async def see_scoreboard(self, inter:Inter, ephemeral:bool=False):
+    @app_commands.describe(
+        length="The amount of members to show in the scoreboard"
+    )
+    async def see_scoreboard(
+        self,
+        inter:Inter,
+        length:int=3
+        ):
         """Get a scoreboard of the top 5 members by rank"""
 
         log.debug("Scoreboard command triggered")
 
-        await inter.response.defer(ephemeral=ephemeral)
+        if length not in range(3, 31):
+            await inter.response.send_message(
+                "Length must be between 3 and 30"
+            )
+            return
+
+        await inter.response.defer()
 
         members = [
             (
@@ -181,15 +195,26 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             for member_id, xp in db.records(
                 "SELECT member_id, experience FROM member_levels "
-                "WHERE guild_id=? ORDER BY experience DESC LIMIT 30",
-                inter.guild.id
+                "WHERE guild_id=? ORDER BY experience DESC LIMIT ?",
+                inter.guild.id, length
             )
         ]
-        print(len(members))
+
+        # est time = 3seconds * length
+        est_finish_dt = datetime.now() + timedelta(seconds=len(members)*3)
+        est = int(est_finish_dt.timestamp())
+        await inter.edit_original_response(
+            content="Drawing scoreboard..."
+            f"\nEstimated time: <t:{est}:R>"
+        )
 
         scoreboard = ScoreBoard(members)
         await scoreboard.draw()  # this will take a while
-        await inter.followup.send(file=scoreboard.get_file(), ephemeral=ephemeral)
+        await inter.delete_original_response()
+        await inter.channel.send(
+            content=inter.user.mention,
+            file=scoreboard.get_file()
+        )
 
     async def send_levelboard(
         self,
