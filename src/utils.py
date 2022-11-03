@@ -87,6 +87,5 @@ def abbreviate_num(num:float) -> str:
         return str(floor(num))
 
     out = int(floor(mlog(num, 1000)))
-    suffixes = 'KMBT'
-    suffix = suffixes[out - 1]
+    suffix = 'KMBT'[out - 1]
     return f'{num / 1000 ** out:.2f}{suffix}'

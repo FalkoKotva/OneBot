@@ -1,8 +1,6 @@
 """Level progression cog"""
 
 import logging
-from typing import Tuple
-from math import sqrt, ceil
 
 import discord
 from discord import app_commands
@@ -10,8 +8,7 @@ from discord import Interaction as Inter
 from discord.ext import commands
 
 from db import db, MemberLevelModel
-from ui import LevelCard
-from ui.levelcards import ScoreBoard
+from ui import LevelCard, ScoreBoard, LevelUpCard
 from utils import is_bot_owner
 from exceptions import EmptyQueryResult
 from . import BaseCog
@@ -43,6 +40,7 @@ class LevelCog(BaseCog, name='Level Progression'):
     @commands.Cog.listener(name="on_member_join")
     async def register_new_member(self, member:discord.Member):
         """Event to add new members to the rank database"""
+
         self.register_member(member)
 
     @commands.Cog.listener(name="on_member_remove")
@@ -50,47 +48,42 @@ class LevelCog(BaseCog, name='Level Progression'):
         """Event to remove members from the rank database"""
 
         log.debug("Removing member %s", member)
-
-        db.execute(
-            "DELETE FROM member_levels WHERE member_id=? AND guild_id=?",
+        MemberLevelModel.from_database(
             member.id, member.guild.id
-        )
+        ).delete()
 
-        log.debug("Completed removal")
+    def gain_exp(self, member:discord.Member, amount:int) -> None | bool:
+        """Gives the given member the given amount of exp
 
-    async def gain_exp(self, member:discord.Member, amount:int):
-        """Gives the given member the given amount of exp"""
+        Args:
+            member (discord.Member): The member to give exp to
+            amount (int): The amount of exp to give
 
-        log.info(
+        Returns:
+            bool: True if levelup, False if not
+            None: If the member is a bot
+        """
+
+        log.debug(
             '%s from %s is gaining %s exp',
             member, member.guild.name, amount
         )
 
-        # Get their data from the database
-        db_exp = db.field(
-            "SELECT experience FROM member_levels WHERE member_id=? AND guild_id=?",
+        if member.bot:
+            log.debug("Member is a bot, cannot add xp")
+            return
+
+        lvl_obj = MemberLevelModel.from_database(
             member.id, member.guild.id
         )
 
-        # We can't continue if they aren't in the database.
-        if not db_exp:
-            log.info(
-                '%s is not in the database, cant update their level',
-                member
-            )
-            return
+        # Update the xp and check for a level up
+        level_before = lvl_obj.level
+        lvl_obj.set_xp(lvl_obj.xp_raw + amount)
 
-        exp = db_exp + amount
+        lvl_obj.update()
 
-        db.execute(
-            "UPDATE member_levels SET experience = ? " \
-            "WHERE member_id=? AND guild_id=?",
-            exp, member.id, member.guild.id
-        )
-
-        log.info('Updated exp for %s to %s', member, exp)
-
-        return exp
+        return level_before, lvl_obj.level
 
     @commands.Cog.listener()
     async def on_message(self, message:discord.Message):
@@ -101,12 +94,21 @@ class LevelCog(BaseCog, name='Level Progression'):
         """
 
         log.debug("Message event triggered by %s", message.author)
+        member = await self.bot.get.member(message.author.id, message.guild.id)
+        levels = self.gain_exp(member, 35)
 
-        if message.author.bot:
-            log.debug("Message author is a bot, ignoring")
+        if not levels:
             return
 
-        await self.gain_exp(message.author, 35)
+        before, after = levels
+        if after > before:
+            await message.reply("GG Level Up!")
+            # lvl_obj = MemberLevelModel.from_database(
+            #     member.id, member.guild.id
+            # )
+            # levelcard = LevelUpCard(member, lvl_obj)
+            # await levelcard.draw()
+            # await message.channel.send(file=levelcard.get_file())
 
     @commands.Cog.listener()
     async def on_member_update(self, _, member:discord.Member):
@@ -118,12 +120,7 @@ class LevelCog(BaseCog, name='Level Progression'):
         """
 
         log.debug("Member update event triggered by %s", member)
-
-        if member.bot:
-            log.debug("Member is a bot, ignoring")
-            return
-
-        await self.gain_exp(member, 150)
+        self.gain_exp(member, 150)
 
     def register_member(self, member:discord.Member):
         """Register a new member in the database
@@ -135,27 +132,18 @@ class LevelCog(BaseCog, name='Level Progression'):
         log.debug("Registering new member %s", member)
 
         if member.bot:
-            log.debug("Member is a bot, not registering")
+            log.debug("Member is a bot, skipping")
             return
 
-        # Check if they are already in the database
-        exists = db.records(
-            "SELECT * FROM member_levels WHERE member_id=? AND guild_id=?",
-            member.id, member.guild.id
-        )
-        if exists:
-            log.debug(
-                "Member is already in the database with this guild, " \
-                "not registering"
+        try:
+            MemberLevelModel.from_database(
+                member.id, member.guild.id
             )
-            return
+            log.debug("Member is already in the database, skipping")
+        except EmptyQueryResult:
+            MemberLevelModel(member.id, member.guild.id, 1).savenew()
+            log.debug("Member added to the database")
 
-        db.execute(
-            "INSERT INTO member_levels(member_id, guild_id) VALUES(?, ?)",
-            member.id, member.guild.id
-        )
-
-        log.debug("Completed registration")
 
     async def validate_members(self, guild:discord.Guild=None):
         """Iterate through all members in the guild and add them to
@@ -166,7 +154,10 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Validating members")
 
-        guilds = (guild,) or self.bot.guilds
+        if not guild:
+            guilds = self.bot.guilds
+        else:
+            guilds = (guild,)
 
         i = 0
         for guild in guilds:
@@ -190,47 +181,15 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
             for member_id, xp in db.records(
                 "SELECT member_id, experience FROM member_levels "
-                "WHERE guild_id=? ORDER BY experience DESC LIMIT 10",
+                "WHERE guild_id=? ORDER BY experience DESC LIMIT 30",
                 inter.guild.id
             )
         ]
+        print(len(members))
 
         scoreboard = ScoreBoard(members)
-        await scoreboard.draw()
+        await scoreboard.draw()  # this will take a while
         await inter.followup.send(file=scoreboard.get_file(), ephemeral=ephemeral)
-
-        # # Create the embed
-        # embed = discord.Embed(
-        #     title="Top 5 members",
-        #     description="The top 5 members by rank",
-        #     color=discord.Color.blurple()
-        # )
-
-        # level_objects = (
-        #     MemberLevelModel.from_database(member.id, inter.guild.id)
-        #     for member in inter.guild.members[:4] if not member.bot
-        # )
-
-        # if not level_objects:
-        #     await inter.response.send_message(
-        #         "No users to check.",
-        #         ephemeral=ephemeral
-        #     )
-        #     return
-
-        # level_objects = sorted(level_objects, key=lambda x: x.rank)
-
-        # # Add the fields
-        # for lvl_obj in level_objects:
-        #     member = await self.bot.get.member(lvl_obj.member_id, inter.guild.id)
-        #     embed.add_field(
-        #         name=f"{lvl_obj.rank}. {member}",
-        #         value=f"Level: {lvl_obj.level}\nExp: {lvl_obj.xp}/{lvl_obj.next_xp}",
-        #         inline=False
-        #     )
-
-        # # Send the embed
-        # await inter.response.send_message(embed=embed, ephemeral=ephemeral)
 
     async def send_levelboard(
         self,
@@ -269,7 +228,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         except EmptyQueryResult as err:
             log.error(err)
-            await self.register_member(member)
+            self.register_member(member)
             await inter.followup.send(
                 f"I couldn't find {member.mention} in the database."
                 "\nI've corrected this now, please try again.",
@@ -330,10 +289,25 @@ class LevelCog(BaseCog, name='Level Progression'):
     async def add_xp_cmd(self, inter:Inter, target:discord.Member, xp:int):
         """Add xp to a member, only the bot owner can use this"""
 
-        await self.gain_exp(target, xp)
+        self.gain_exp(target, xp)
 
         await inter.response.send_message(
             f"Added {xp} xp to {target.mention}",
+        )
+
+    @admin_group.command(name="set-xp")
+    @app_commands.check(is_bot_owner)
+    async def set_xp_cmd(self, inter:Inter, target:discord.Member, xp:int):
+        """Set the xp of a member, only the bot owner can use this"""
+
+        lvl_obj = MemberLevelModel.from_database(
+            target.id, inter.guild.id
+        )
+        lvl_obj.set_xp(xp)
+        lvl_obj.update()
+
+        await inter.response.send_message(
+            f"Set {target.mention}'s xp to {xp}",
         )
 
 

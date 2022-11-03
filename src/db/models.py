@@ -3,9 +3,7 @@
 import logging
 from dataclasses import dataclass
 from math import sqrt, ceil
-
-from discord import Member
-from discord.ext.commands import Bot
+from enum import Enum
 
 from . import db
 from utils import abbreviate_num
@@ -13,6 +11,49 @@ from exceptions import EmptyQueryResult
 
 
 log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class GuildChannels:
+    """Dataclass for guild channel data"""
+
+    channel_id: int
+    guild_id: int
+    purpose_id: int
+
+    @classmethod
+    def from_purpose(cls, guild_id:int, purpose_id:int):
+
+        data = db.record(
+            "SELECT * FROM guild_channels WHERE guild_id = ? AND purpose_id = ?",
+            guild_id, purpose_id
+        )
+        if not data:
+            raise EmptyQueryResult("No channel found for purpose")
+
+        channel_id, _, _ = data
+        return cls(
+            channel_id=channel_id,
+            guild_id=guild_id,
+            purpose_id=purpose_id
+        )
+
+    @classmethod
+    def from_database(cls, channel_id:int):
+
+        data = db.record(
+            "SELECT * FROM guild_channels WHERE channel_id = ?",
+            channel_id
+        )
+        if not data:
+            raise EmptyQueryResult("No channel found with that id")
+
+        _, guild_id, purpose_id = data
+        return cls(
+            channel_id=channel_id,
+            guild_id=guild_id,
+            purpose_id=purpose_id
+        )
 
 
 @dataclass
@@ -24,10 +65,12 @@ class MemberLevelModel:
     xp_raw: int
 
     def __post_init__(self):
+        self._update()
+        log.debug("Created MemberLevelModel Instance")
+
+    def _update(self):
         self.level_raw = 0.07 * sqrt(self.xp_raw)
         self.next_xp_raw = (ceil(self.level_raw) / 0.07) ** 2
-
-        log.debug("Created MemberLevelModel Instance")
 
     @property
     def xp(self) -> str:
@@ -52,7 +95,7 @@ class MemberLevelModel:
 
     @property
     def rank(self) -> int:
-        """Get the member rank"""  # BUG: always returns 1, because of the way the query is written
+        """Get the member rank"""
 
         log.debug("Getting member rank")
         rank = db.field(
@@ -68,6 +111,52 @@ class MemberLevelModel:
             return "?"
 
         return rank
+
+    def set_xp(self, new_xp:int) -> None:
+        """Set the xp of this object
+
+        Args:
+            new_xp (int): The new xp to set
+        """
+
+        log.debug("Setting xp to %s", new_xp)
+        self.xp_raw = int(new_xp)
+        self._update()
+
+    def savenew(self, commit:bool=False) -> None:
+        """Save this model to the database"""
+
+        log.debug("Saving MemberLevelModel")
+        db.execute(
+            "INSERT INTO member_levels (member_id, guild_id) "
+            "VALUES (?, ?)",
+            self.member_id, self.guild_id
+        )
+        if commit:
+            db.commit()
+
+    def update(self, commit:bool=False) -> None:
+        """Save this model to the database"""
+
+        log.debug("Saving MemberLevelModel")
+        db.execute(
+            "UPDATE member_levels SET experience = ? "
+            "WHERE member_id=? AND guild_id=?",
+            self.xp_raw, self.member_id, self.guild_id
+        )
+        if commit:
+            db.commit()
+
+    def delete(self, commit:bool=False) -> None:
+        """Delete this model from the database"""
+
+        log.debug("Deleting MemberLevelModel")
+        db.execute(
+            "DELETE FROM member_levels WHERE member_id=? AND guild_id=?",
+            self.member_id, self.guild_id
+        )
+        if commit:
+            db.commit()
 
     @classmethod
     def from_database(cls, member_id: int, guild_id:int):
@@ -86,4 +175,3 @@ class MemberLevelModel:
             )
 
         return cls(member_id, guild_id, xp)
-
