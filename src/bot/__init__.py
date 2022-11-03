@@ -29,11 +29,14 @@ class Bot(commands.Bot):
         "get",
         "cog_events",
         "all_cogs_loaded",
-        "commands_synced"
+        "commands_synced",
+        "debug"
     )
 
-    def __init__(self):
+    def __init__(self, debug:bool=False):
         """Initialize the bot"""
+
+        self.debug = debug
 
         # Roughly the time the bot was started
         self._start_time = time.time()
