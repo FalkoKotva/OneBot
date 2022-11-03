@@ -1,6 +1,8 @@
 """Levelcards module. Contains the Levelcard class and related functions."""
 
 import logging
+from time import perf_counter
+from math import ceil
 
 from discord import Status, Colour, Member, File
 from easy_pil import (
@@ -70,59 +72,14 @@ def get_colours(dark_mode:bool) -> tuple[str, str, str, str]:
     return WHITE, LIGHT_GREY, BLACK, DARK_GREY
 
 
-class ScoreBoard:
-    """Scoreboard class. Creates a scoreboard image for each member"""
+class CustomImageBase:
+    """Base class for custom images"""
 
-    # __slots__ = ("members",)
-    scoreboard: Editor
-
-    def __init__(self, members:tuple[tuple[Member, MemberLevelModel]]):
-        self.members = members
-
-    async def draw(self):
-        """Draw the scoreboard"""
-
-        log.info("Drawing scoreboard")
-
-        self.scoreboard = Editor(Canvas((900, 200*(len(self.members)+1))))
-
-        for index, (member, lvl_obj) in enumerate(self.members):
-            level_card = LevelCard(member, lvl_obj)
-            await level_card.draw()
-            self.scoreboard.paste(level_card.image, (0, 200*(index+1)))
-
-    def get_file(self, filename:str=None) -> File:
-        """Get the card as a discord.File object. Filename defaults to
-        "<memberid>_levelcard.png"
-
-        Args:
-            filename (str, optional): Overwrite the default filename.
-
-        Returns:
-            discord.File: The card as a discord.File
-        """
-
-        log.debug("Getting scoreboard as file")
-
-        return File(
-            self.scoreboard.image_bytes,
-            filename=filename or "onebot_scoreboard.png",
-            description="scoreboard created by OneBot."
-        )
-
-
-class LevelCard:
-    """A ranking card for members"""
-
-    # pylint: disable=too-many-arguments
-    # pylint: disable=too-many-instance-attributes
-
-    card: Editor
-    is_darkmode: bool
-    lvl_obj: MemberLevelModel
-    member: Member
+    __slots__ = ()
+    editor: Editor
 
     # Colours
+    is_darkmode: bool
     _foreground_1: str
     _foreground_2: str
     _background_1: str
@@ -130,77 +87,7 @@ class LevelCard:
     _accent_colour:str
     _status_colour:str
 
-    def __init__(
-        self, member:Member, lvl_obj:MemberLevelModel, is_darkmode:bool=True
-    ):
-        """Create a new LevelCard
-
-        Args:
-            member (discord.Member): The member to create the card for
-            rank (int): The rank of the member
-            xp (int): The xp of the member
-            level (int): The level of the member
-            dark_mode (bool): Whether the card is in dark mode
-        """
-
-        log.info("Creating new levelcard")
-
-        self.member = member
-        self.lvl_obj = lvl_obj
-        self.is_darkmode = is_darkmode
-
-    async def draw(self):
-        """Draw the level card for the member
-
-        Returns:
-            LevelCard: The same instance of the levelcard
-        """
-
-        log.debug("Drawing levelcard")
-
-        # The colours are used in the rest of the drawing process,
-        # so it's important to define them first
-        self._define_colours()
-
-        # The card is the main image that is drawn on
-        self.card = Editor(
-            Canvas(
-                (1800, 400),
-                color=self._background_1
-            )
-        ).rounded_corners(20)
-
-        # Accent polygon is drawn behind the avatar
-        self._draw_accent_polygon()
-
-        # The avatar of the member is drawn on the card
-        await self._draw_avatar()
-
-        # The status circle that matches the discord member status
-        self._draw_status_icon()
-
-        # The progress bar dynamically changes based on the member's
-        # xp and the xp needed to level up
-        self._draw_progress_bar()
-
-        # The name is actually the member's display name. This is their
-        # nickname if they have one, otherwise it's their username
-        self._draw_name()
-
-        # The exp / next exp part is drawn here
-        self._draw_exp()
-
-        # The rank / level part is drawn here
-        self._draw_levelrank()
-
-        # The card is resized to half its size to antialias it
-        self._antialias_resize()
-
-        log.debug("Finished drawing levelcard, returning")
-
-        return self
-
-    def _define_colours(self):
+    def define_colours(self):
         """Define the colours for the card"""
 
         log.debug("Defining colours")
@@ -219,12 +106,190 @@ class LevelCard:
         else:
             self._accent_colour = self.member.colour.to_rgb()
 
+    def antialias_resize(self):
+        """Resize the image by half to antialias it"""
+
+        log.debug("Resizing and antialiasing the image")
+
+        image = self.editor.image
+        new_size = tuple(i//2 for i in image.size)
+        self.editor = Editor(image.resize(
+            size=new_size,
+            resample=Image.ANTIALIAS
+        ))
+
+    def get_file(self, filename:str=None) -> File:
+        """Get the card as a discord.File object. Filename defaults to
+        "<memberid>_levelcard.png"
+
+        Args:
+            filename (str, optional): Overwrite the default filename.
+
+        Returns:
+            discord.File: The card as a discord.File
+        """
+
+        return File(
+            self.editor.image_bytes,
+            filename=filename or "onebot_image.png",
+            description=f"An image created by OneBot."
+        )
+
+class LevelUpCard(CustomImageBase):
+    """A ranking card for members"""
+
+    __slots__ = ("is_darkmode",)
+    lvl_obj: MemberLevelModel
+    member: Member
+
+    def __init__(
+        self, member:Member, lvl_obj:MemberLevelModel, is_darkmode:bool=True
+    ):
+        """Create a new LevelCard
+
+        Args:
+            member (discord.Member): The member to create the card for
+            rank (int): The rank of the member
+            xp (int): The xp of the member
+            level (int): The level of the member
+            dark_mode (bool): Whether the card is in dark mode
+        """
+
+        log.info("Creating new level up card")
+
+        self.member = member
+        self.lvl_obj = lvl_obj
+        self.is_darkmode = is_darkmode
+
+    async def draw(self):
+        """Draw the level card for the member
+
+        Returns:
+            LevelCard: The same instance of the levelcard
+        """
+
+        log.debug("Drawing levelcard")
+
+        # The colours are used in the rest of the drawing process,
+        # so it's important to define them first
+        self.define_colours()
+
+        # The card is the main image that is drawn on
+        self.editor = Editor(
+            Canvas(
+                (1800, 200),
+                color=self._background_1
+            )
+        ).rounded_corners(100)
+
+        # The card is resized to half its size to antialias it
+        self.antialias_resize()
+
+        log.debug("Finished drawing levelcard, returning")
+
+        return self
+
+
+class ScoreBoard(CustomImageBase):
+    """Scoreboard class. Creates a scoreboard image for each member"""
+
+    slots = ("members",)
+
+    def __init__(self, members:tuple[tuple[Member, MemberLevelModel]]):
+        self.members = members
+
+    async def draw(self):
+        """Draw the scoreboard"""
+
+        log.info("Drawing scoreboard")
+
+        width = 2700 if len(self.members) >= 3 else 900 * len(self.members)
+        height = 200 * ceil(len(self.members) / 3) if len(self.members) >= 3 else 200
+        x = y = 0
+
+        self.editor = Editor(Canvas((width, height)))
+
+        for i, (member, lvl_obj) in enumerate(self.members):
+
+            log.debug("%s is at position %sx%s", i, x, y)
+
+            card = LevelCard(member, lvl_obj)
+            await card.draw()
+            self.editor.paste(card.editor, (x, y))
+
+            i += 1
+            if i % 3 != 0:
+                x += 900
+            # every fourth card is on a new row
+            else:
+                x = 0
+                y += 200
+
+class LevelCard(CustomImageBase):
+    """A ranking card for members"""
+
+    __slots__ = (
+        "lvl_obj", "member", "is_darkmode",
+        "_foreground_1",
+        "_foreground_2",
+        "_background_1",
+        "_background_2",
+        "_accent_colour",
+        "_status_colour",
+        "editor"
+    )
+
+    def __init__(
+        self, member:Member, lvl_obj:MemberLevelModel,
+        is_darkmode:bool=True
+    ):
+        """Create a new LevelCard"""
+
+        log.info("Creating new levelcard")
+
+        self.member = member
+        self.lvl_obj = lvl_obj
+        self.is_darkmode = is_darkmode
+
+    async def draw(self):
+        """Draw the level card"""
+
+        log.debug("Drawing levelcard")
+
+        # The colours are used in the rest of the drawing process,
+        # so it's important to define them first
+        self.define_colours()
+
+        # The card is the main image that is drawn on
+        self.editor = Editor(
+            Canvas(
+                (1800, 400),
+                color=self._background_1
+            )
+        ).rounded_corners(20)
+
+        # Draw the various elements of the card
+        self._draw_accent_polygon()
+        await self._draw_avatar()
+        self._draw_status_icon()
+        self._draw_progress_bar()
+        self._draw_name()
+        self._draw_exp()
+        self._draw_levelrank()
+
+        # The card is resized to half its size to antialias it
+        self.antialias_resize()
+
+        log.debug("Finished drawing levelcard, returning")
+
+        return self
+
     def _draw_accent_polygon(self):
         """Draw the accent colour polygon on the card"""
 
         log.debug("Drawing accent polygon")
 
-        self.card.polygon(
+        self.editor.polygon(
             (
                 (2, 100),  # top left
                 (2, 360),  # bottom left
@@ -236,7 +301,7 @@ class LevelCard:
 
         # This rectangle is drawn in the top left corner of the card
         # to round off the corners of the accent polygon
-        self.card.rectangle(
+        self.editor.rectangle(
             (2, 2),
             width=115,
             height=115,
@@ -262,7 +327,7 @@ class LevelCard:
         )
 
         # Paste the avatar onto the card
-        self.card.paste(avatar_image, (40, 40))
+        self.editor.paste(avatar_image, (40, 40))
 
     def _draw_status_icon(self):
         """Draw the status icon on the card"""
@@ -306,7 +371,7 @@ class LevelCard:
                 pass
 
         # Paste the status icon onto the card
-        self.card.paste(status_image, (260, 260))
+        self.editor.paste(status_image, (260, 260))
 
     def _draw_progress_bar(self):
         """Draw the progress bar"""
@@ -323,7 +388,7 @@ class LevelCard:
         radius = 40
 
         # The trough for the bar background
-        self.card.rectangle(
+        self.editor.rectangle(
             position=position,
             width=width, height=height,
             color=self._background_2,
@@ -331,7 +396,7 @@ class LevelCard:
         )
 
         # The bar itself, dynamically changes based on the member's xp
-        self.card.bar(
+        self.editor.bar(
             position=position,
             max_width=width, height=height,
             color=self._accent_colour,
@@ -354,7 +419,7 @@ class LevelCard:
             name = name[:15]
 
         # Draw it right onto the card
-        self.card.multi_text(
+        self.editor.multi_text(
             position=(420, 220),  # bottom left
             texts=(
                 Text(
@@ -376,7 +441,7 @@ class LevelCard:
         log.debug("Drawing exp text")
 
         # Draw it right onto the card
-        self.card.multi_text(
+        self.editor.multi_text(
             position=(1740, 225),  # bottom right
             align="right",
             texts=(
@@ -398,7 +463,7 @@ class LevelCard:
 
         log.debug("Drawing level and rank text")
 
-        self.card.multi_text(
+        self.editor.multi_text(
             position=(1700, 80),  # top right
             align="right",
             texts=(
@@ -424,44 +489,3 @@ class LevelCard:
                 )
             )
         )
-
-    def _antialias_resize(self):
-        """Resize the image by half to antialias it"""
-
-        log.debug("Resizing and antialiasing the image")
-
-        image = self.card.image
-        new_size = tuple(i//2 for i in image.size)
-        self.card = Editor(image.resize(
-            size=new_size,
-            resample=Image.ANTIALIAS
-        ))
-
-    def get_file(self, filename:str=None) -> File:
-        """Get the card as a discord.File object. Filename defaults to
-        "<memberid>_levelcard.png"
-
-        Args:
-            filename (str, optional): Overwrite the default filename.
-
-        Returns:
-            discord.File: The card as a discord.File
-        """
-
-        return File(
-            self.card.image_bytes,
-            filename=filename or "onebot_levelcard.png",
-            description=
-                f"A level card image for {self.member.display_name} "
-                "created by OneBot."
-        )
-
-    @property
-    def image(self) -> Image.Image:
-        """Shorthand to get the card as a PIL.Image object
-
-        Returns:
-            PIL.Image: The card as a PIL.Image
-        """
-
-        return self.card.image

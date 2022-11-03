@@ -16,4 +16,4 @@ from .embeds import (
     HelpGetPronounsEmbed
 )
 from .views import EmbedPageView, ExpClusterView
-from .levelcards import LevelCard, ScoreBoard
+from .levelcards import LevelCard, ScoreBoard, LevelUpCard

@@ -67,7 +67,7 @@ class Errors(BaseCog, name="errors"):
 			# Send the default error message and create an edit
 			# shorthand to add more details to the message once
 			# we've figured out what the error is.
-			log.error(error)
+			log.error(error.with_traceback(None))
 			await self._respond_to_interaction(inter)
 			edit = lambda x: inter.edit_original_response(content=x)
 
@@ -170,4 +170,5 @@ class Errors(BaseCog, name="errors"):
 	# 		self.trace_error("get_modal_error", e)
 
 async def setup(bot):
-	await bot.add_cog(Errors(bot))
+	if not bot.debug:
+		await bot.add_cog(Errors(bot))
