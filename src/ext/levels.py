@@ -171,24 +171,30 @@ class LevelCog(BaseCog, name='Level Progression'):
             log.debug("Validated %s members for %s", i, guild.name)
 
     @app_commands.command(name="scoreboard")
-    @app_commands.describe(
-        length="The amount of members to show in the scoreboard"
-    )
-    async def see_scoreboard(
+    async def scoreboard_cmd(
         self,
         inter:Inter,
-        length:int=3
+        length:int=6
         ):
-        """Get a scoreboard of the top 5 members by rank"""
+        """Get a scoreboard of members ordered by rank
+
+        Args:
+            inter (Inter): The interaction object
+            length (int): The amount of members to show
+        """
 
         log.debug("Scoreboard command triggered")
 
-        # Validate the length
+        # Validate the length range[3, 30]
         if length not in range(3, 31):
+            log.debug("Invalid length, sending error message")
             await inter.response.send_message(
-                "Length must be between 3 and 30"
+                "Length must be between 3 and 30",
+                ephemeral=True
             )
             return
+
+        log.debug("Gathering member level data")
 
         # Create a list of tuples containing a member object
         # and their level object
@@ -204,22 +210,37 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
         ]
 
+        log.debug("Estimating the time to complete")
+
         # Display the estimated time to finish drawing the scoreboard
-        est_finish_dt = datetime.now() + timedelta(seconds=len(members)*4)
+        est_finish_dt = datetime.now() + timedelta(seconds=len(members)*3)
         est = int(est_finish_dt.timestamp())
         await inter.response.send_message(
             content="Drawing scoreboard..."
             f"\nEstimated time: <t:{est}:R>"
         )
 
+        log.debug("Creating & Drawing scoreboard")
+
         scoreboard = ScoreBoard(members)
         await scoreboard.draw()  # This will take a while
 
+        # Let the user know that progress is being made
+        await inter.edit_original_response(
+            content="Scoreboard created!\nMaking a "
+            "file of it now, this may take a moment..."
+        )
+
+        log.debug("Making scoreboard file")
+
+        # Create a discord file object from the scoreboard
+        file = scoreboard.get_file()  # This can take a while
+
         # Now that we are done drawing, send the file
-        await inter.delete_original_response()
-        await inter.channel.send(
-            content=inter.user.mention,
-            file=scoreboard.get_file()
+        await inter.edit_original_response(
+            attachments=(file,),
+            content=f"**{inter.guild} | Showing {len(members)} "
+                f"of {inter.guild.member_count} members**"
         )
 
     async def send_levelboard(
