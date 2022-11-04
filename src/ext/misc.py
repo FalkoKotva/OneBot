@@ -29,7 +29,7 @@ class MiscCog(BaseCog, name="Misc Commands"):
                 colour=Colour.from_str(colour) if colour else Colour.gold()
             )
 
-            await _inter.followup.send(embed=embed)
+            await _inter.response.send_message(embed=embed)
 
         modal = MakeEmbedModal(coro=do_embed)
         await inter.response.send_modal(modal)
