@@ -61,7 +61,7 @@ class LevelCog(BaseCog, name='Level Progression'):
             amount (int): The amount of exp to give
 
         Returns:
-            bool: True if levelup, False if not
+            tuple: A tuple containing the old and new levels
             None: If the member is a bot
         """
 
@@ -94,6 +94,9 @@ class LevelCog(BaseCog, name='Level Progression'):
             message (discord.Message): The discord msg object
         """
 
+        if message.author.bot:
+            return
+
         log.debug("Message event triggered by %s", message.author)
         member = await self.bot.get.member(message.author.id, message.guild.id)
         levels = self.gain_exp(member, 35)
@@ -103,7 +106,7 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         before, after = levels
         if after > before:
-            await message.reply("GG Level Up!")
+            await message.reply("GG! You've advanced to level %s" % after)
             # lvl_obj = MemberLevelModel.from_database(
             #     member.id, member.guild.id
             # )
@@ -180,14 +183,15 @@ class LevelCog(BaseCog, name='Level Progression'):
 
         log.debug("Scoreboard command triggered")
 
+        # Validate the length
         if length not in range(3, 31):
             await inter.response.send_message(
                 "Length must be between 3 and 30"
             )
             return
 
-        await inter.response.defer()
-
+        # Create a list of tuples containing a member object
+        # and their level object
         members = [
             (
                 await self.bot.get.member(member_id, inter.guild.id),
@@ -200,16 +204,18 @@ class LevelCog(BaseCog, name='Level Progression'):
             )
         ]
 
-        # est time = 3seconds * length
-        est_finish_dt = datetime.now() + timedelta(seconds=len(members)*3)
+        # Display the estimated time to finish drawing the scoreboard
+        est_finish_dt = datetime.now() + timedelta(seconds=len(members)*4)
         est = int(est_finish_dt.timestamp())
-        await inter.edit_original_response(
+        await inter.response.send_message(
             content="Drawing scoreboard..."
             f"\nEstimated time: <t:{est}:R>"
         )
 
         scoreboard = ScoreBoard(members)
-        await scoreboard.draw()  # this will take a while
+        await scoreboard.draw()  # This will take a while
+
+        # Now that we are done drawing, send the file
         await inter.delete_original_response()
         await inter.channel.send(
             content=inter.user.mention,

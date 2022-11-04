@@ -1,6 +1,6 @@
 """Init the ui package"""
 
-from .modals import BirthdayModal, BanMemberModal
+from .modals import BirthdayModal, BanMemberModal, MakeEmbedModal
 from .embeds import (
     NextBirthdayEmbed,
     BirthdayHelpEmbed,
@@ -13,7 +13,9 @@ from .embeds import (
     ListConfiguredChannelsEmbed,
     ListMutedEmbed,
     HelpSetPronounsEmbed,
-    HelpGetPronounsEmbed
+    HelpGetPronounsEmbed,
+    WelcomeEmbed,
+    RemoveEmbed
 )
 from .views import EmbedPageView, ExpClusterView
 from .levelcards import LevelCard, ScoreBoard, LevelUpCard

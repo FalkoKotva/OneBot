@@ -1,7 +1,7 @@
 """ui modals"""
 
 import logging
-from typing import Callable
+from typing import Callable, Coroutine
 from datetime import datetime
 import discord
 from discord import Interaction as Inter
@@ -9,6 +9,48 @@ from discord import ui as dui
 
 
 log = logging.getLogger(__name__)
+
+
+class MakeEmbedModal(dui.Modal, title="Create Embed"):
+    """Create a custom embed"""
+
+    title_input = dui.TextInput(
+        label="Embed Title",
+        placeholder="My really cool embed",
+        style=discord.TextStyle.short,
+        required=True,
+        min_length=1,
+        max_length=256
+    )
+    description_input = dui.TextInput(
+        label="Embed Description",
+        placeholder="This descibes my awesome embed",
+        style=discord.TextStyle.long,
+        required=True,
+        min_length=1,
+        max_length=2048
+    )
+    colour_input = dui.TextInput(
+        label="Embed Colour [Hex Format]",
+        placeholder="#FFFFFF",
+        default="#FFFFFF",
+        style=discord.TextStyle.short,
+        required=False,
+        min_length=7,
+        max_length=7
+    )
+
+    def __init__(self, coro: Coroutine):
+        super().__init__()
+        self.coro = coro
+
+    async def on_submit(self, inter:Inter):
+        await self.coro(
+            inter=inter,
+            title=self.title_input.value,
+            description=self.description_input.value,
+            colour=self.colour_input.value
+        )
 
 
 class BanMemberModal(dui.Modal, title="Confirm Ban"):
