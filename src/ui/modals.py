@@ -46,7 +46,7 @@ class MakeEmbedModal(dui.Modal, title="Create Embed"):
 
     async def on_submit(self, inter:Inter):
         await self.coro(
-            inter=inter,
+            _inter=inter,
             title=self.title_input.value,
             description=self.description_input.value,
             colour=self.colour_input.value
