@@ -18,6 +18,38 @@ log = logging.getLogger(__name__)
 
 
 
+class WelcomeEmbed(discord.Embed):
+    """Welcome embed"""
+
+    def __init__(self, member:discord.Member):
+
+        super().__init__(
+            title="Welcome to the server!",
+            description=f"Thanks for joining {member.mention}"
+                "\nPlease read the rules and have fun!",
+            colour=discord.Colour.gold(),
+            timestamp = datetime.utcnow()
+        )
+        self.set_thumbnail(url=member.display_avatar.url)
+        self.set_footer(text="User joined")
+
+
+class RemoveEmbed(discord.Embed):
+    """Remove embed"""
+
+    def __init__(self, member:discord.Member):
+
+        super().__init__(
+            title="Goodbye, you won't be missed!",
+            description=f"{member} has left the server."
+                "\nAllow me to reach for my tiny violin.",
+            colour=discord.Colour.gold(),
+            timestamp = datetime.utcnow()
+        )
+        self.set_thumbnail(url=member.display_avatar.url)
+        self.set_footer(text="User left")
+
+
 class ListMutedEmbed(discord.Embed):
     """List all muted members for the given data"""
 
