@@ -8,7 +8,8 @@ from discord import app_commands
 from discord import Interaction as Inter
 from discord.ext import commands
 
-from db import db, MemberLevelModel
+from db import db, MemberLevelModel, UserSettings
+from db.enums import UserSettingsNames
 from ui import LevelCard, ScoreBoard, LevelUpCard
 from utils import is_bot_owner
 from exceptions import EmptyQueryResult
@@ -105,14 +106,10 @@ class LevelCog(BaseCog, name='Level Progression'):
             return
 
         before, after = levels
-        if after > before:
+        if after > before and UserSettings.get(
+            member.id, UserSettingsNames.lvl_alert
+        ):
             await message.reply("GG! You've advanced to level %s" % after)
-            # lvl_obj = MemberLevelModel.from_database(
-            #     member.id, member.guild.id
-            # )
-            # levelcard = LevelUpCard(member, lvl_obj)
-            # await levelcard.draw()
-            # await message.channel.send(file=levelcard.get_file())
 
     @commands.Cog.listener()
     async def on_member_update(self, _, member:discord.Member):

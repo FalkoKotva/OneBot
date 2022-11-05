@@ -38,12 +38,3 @@ LIGHT_GREY = "#9F9F9F"
 #fonts
 POPPINS = Font.poppins(size=70)
 POPPINS_SMALL = Font.poppins(size=50)
-
-# Channel Purposes
-_channel_purposes_data = db.records("SELECT * FROM guild_channel_purposes")
-_channel_purposes_map = {name: _id for _id, name in _channel_purposes_data}
-ChannelPurposes = Enum("ChannelPurposes", _channel_purposes_map)
-
-_role_purposes_data = db.records("SELECT * FROM guild_role_purposes")
-_role_purposes_map = {name: _id for _id, name in _role_purposes_data}
-RolePurposes = Enum("RolePurposes", _role_purposes_map)

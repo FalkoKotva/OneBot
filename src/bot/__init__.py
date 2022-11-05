@@ -10,8 +10,8 @@ from datetime import timedelta
 import discord
 from discord.ext import commands, tasks
 
-from constants import ChannelPurposes
 from db import db
+from db.enums import ChannelPurposes
 from ._get import Get
 from ._logs import setup_logs
 from ._ext import CogManager

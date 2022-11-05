@@ -68,3 +68,20 @@ CREATE TABLE IF NOT EXISTS guild_roles (
     FOREIGN KEY (purpose_id) REFERENCES guild_role_purposes(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    safe_name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT
+);
+
+INSERT OR IGNORE INTO settings (safe_name, name, description) VALUES ('lvl_alert', 'Level Up Alert', 'Send a message when you level up.');
+
+CREATE TABLE IF NOT EXISTS user_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    setting_id INTEGER NOT NULL,
+    value INTEGER NOT NULL,
+    FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
+    UNIQUE (user_id, setting_id)
+);

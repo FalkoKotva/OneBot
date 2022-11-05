@@ -4,9 +4,9 @@ import logging
 import discord
 from discord.ext import commands
 
-from constants import ChannelPurposes
 from exceptions import EmptyQueryResult
 from db import db
+from db.enums import ChannelPurposes
 from ui import WelcomeEmbed, RemoveEmbed
 from . import BaseCog
 

@@ -6,7 +6,7 @@ from discord.ext import tasks
 from discord import app_commands, Interaction as Inter
 import discord
 
-from constants import DATE_FORMAT, ChannelPurposes, RolePurposes
+from constants import DATE_FORMAT
 from ui import (
     BirthdayModal,
     NextBirthdayEmbed,
@@ -14,6 +14,7 @@ from ui import (
     CelebrateBirthdayEmbed
 )
 from db import db
+from db.enums import ChannelPurposes, RolePurposes
 from . import BaseCog
 
 
