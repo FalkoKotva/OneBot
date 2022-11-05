@@ -1,5 +1,7 @@
 from . import db
-from . import models
-from .models import MemberLevelModel
 
 db.build()
+
+from . import models
+from . import enums
+from .models import MemberLevelModel, UserSettings

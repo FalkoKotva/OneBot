@@ -12,7 +12,7 @@ from discord import (
 )
 
 from db import db
-from constants import ChannelPurposes, RolePurposes
+from db.enums import ChannelPurposes, RolePurposes
 from ui import ListConfiguredChannelsEmbed
 from . import BaseCog
 

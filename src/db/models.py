@@ -1,5 +1,6 @@
 """Database object models"""
 
+import sqlite3
 import logging
 from dataclasses import dataclass
 from math import sqrt, ceil
@@ -175,3 +176,21 @@ class MemberLevelModel:
             )
 
         return cls(member_id, guild_id, xp)
+
+
+class UserSettings:
+
+    def get(user_id:int, setting:Enum) -> bool:
+        """Get a user setting"""
+
+        log.debug("Getting user setting")
+
+        try:
+            return bool(db.field(
+                "SELECT value FROM user_settings "
+                "WHERE user_id = ? AND setting_id = ?",
+                user_id, setting.value
+            ))
+        except sqlite3.IntegrityError:
+            log.debug("Setting not found")
+            return None
