@@ -4,8 +4,8 @@ import logging
 from os.path import isfile
 from sqlite3 import connect
 
-DB_PATH = './data/db/db.sqlite3'
-BUILD_PATH = './data/db/build.sql'
+DB_PATH = 'C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\data\\db\\db.sqlite3'
+BUILD_PATH = "C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\data\\db\\build.sql"
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,9 @@ def commit():
     """Commit changes to the database"""
 
     log.debug("Committing changes")
+    conn = connect(DB_PATH, check_same_thread=False)
     conn.commit()
+
 
 def close():
     """Close the database connection"""
@@ -94,7 +96,7 @@ def multiexec(cmd, valset):
 
 def scriptexec(path):
     """Execute a script"""
-
+    
     log.debug("Executing script: %s", path)
     with open(path, 'r', encoding='utf-8') as script:
         cur.executescript(script.read())

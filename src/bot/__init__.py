@@ -228,7 +228,7 @@ class Bot(commands.Bot):
 
         log.info('Loading extensions')
 
-        for filename in os.listdir('./src/ext'):
+        for filename in os.listdir('C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\src\\ext'):
 
             # Skip non cog files
             if not filename.endswith('.py') or filename.startswith('_'):

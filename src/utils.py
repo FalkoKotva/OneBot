@@ -28,18 +28,18 @@ async def get_member(interaction: discord.Interaction, member: str):
     # Otherwise, it's likely a username, so we'll use that
     return guild.get_member_named(member)
 
-def list_cogs() -> list[str]:
+def list_cogs() -> 'list[str]':
     """Returns a list of strings containing the filenames of all cogs.
 
     Returns:
         list[str]: List of cog filenames.
     """
     return [
-        filename for filename in os.listdir('./src/ext')
+        filename for filename in os.listdir('C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\src\\ext')
         if filename.endswith('.py') and not filename.startswith('__')
     ]
 
-def to_choices(string_list:list[str]) -> list[app_commands.Choice[str]]:
+def to_choices(string_list: 'list[str]') -> 'list[app_commands.Choice[str]]':
     """Converts a list of strings to a list of Choice objects.
 
     Returns:
