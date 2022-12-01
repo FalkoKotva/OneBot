@@ -1,15 +1,10 @@
-
 import pytest
 import discord.ext.test as dpytest
 
-from bot import Bot
-
-with open('C:\\Users\\ksang\\Desktop\\ESS\\issue\\OneBot\\src\\TOKEN', 'r', encoding='utf-8') as file:
-    token = file.read()
 
 @pytest.fixture
 def bot(event_loop):
-    bot = Bot()
+    bot = ... # However you create your bot, make sure to use loop=event_loop
     dpytest.configure(bot)
     return bot
 
