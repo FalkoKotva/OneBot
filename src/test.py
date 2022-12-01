@@ -4,7 +4,7 @@ import discord.ext.test as dpytest
 
 from bot import Bot
 
-with open('C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\src\\TOKEN', 'r', encoding='utf-8') as file:
+with open('C:\\Users\\ksang\\Desktop\\ESS\\issue\\OneBot\\src\\TOKEN', 'r', encoding='utf-8') as file:
     token = file.read()
 
 @pytest.fixture
