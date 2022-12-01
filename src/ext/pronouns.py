@@ -90,7 +90,7 @@ class PronounCog(BaseCog, name="Pronouns"):
     async def set_pronouns_cmd(self, inter:Inter):
         """Set your pronouns"""
 
-        embed = SetPronounsEmbed()
+        embed = SetPronounsEmbed() # noqa: F821
         await inter.response.send_message(embed=embed, ephemeral=True)
 
     @group.command(name="get")
