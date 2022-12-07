@@ -3,7 +3,7 @@ import discord.ext.test as dpytest
 
 import sys
 # caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.insert(1, 'OneBot/src/')
+sys.path.append('OneBot/src/')
 import bot as b
 
 @pytest.fixture
