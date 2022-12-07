@@ -1,4 +1,4 @@
-name: Python package
+name: Testing OneBot
 
 on: [push]
 
@@ -74,4 +74,4 @@ jobs:
           pip install pytest
           pip install pytest-cov
           python3 -m pip install dpytest
-          pytest test.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+          pytest OneBot/tests/test.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
