@@ -1,16 +1,17 @@
 import pytest
 import discord.ext.test as dpytest
 
-import asyncio
-from bot import Bot 
+import sys
+# caution: path[0] is reserved for script path (or '' in REPL)
+sys.path.insert(1, 'OneBot\\src')
+import bot as b
 
-with open('C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\src\\TOKEN', 'r', encoding='utf-8') as file:
-    token = file.read()
+token = "MTAzOTQ1MzYxODk1NDMxNzgzNA.GDtMgo.pct3HlmH9a42rLQJKOBUOYdikK4uqT-MmDQEBQ"
 
 @pytest.fixture
 def bot(event_loop):
     
-    with Bot() as bot:
+    with b.Bot() as bot:
         bot.load_extensions()
         bot.start(token, reconnect=True) # However you create your bot, make sure to use loop=event_loop
         dpytest.configure(bot)
