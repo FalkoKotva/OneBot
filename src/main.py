@@ -9,7 +9,7 @@ async def main():
 
     # You will need to create this file if it doesn't exist
     # and paste your bot token in it.
-    with open('C:\\Users\\ksang\\OneDrive\\Desktop\\ESS\\issue\\OneBot\\src\\TOKEN', 'r', encoding='utf-8') as file:
+    with open('OneBot/src/TOKEN', 'r', encoding='utf-8') as file:
         token = file.read()
 
     # Construct the bot, load the extensions and start er up.
