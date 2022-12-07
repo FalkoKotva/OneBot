@@ -6,14 +6,10 @@ import sys
 sys.path.insert(1, 'OneBot\\src')
 import bot as b
 
-token = "MTAzOTQ1MzYxODk1NDMxNzgzNA.GDtMgo.pct3HlmH9a42rLQJKOBUOYdikK4uqT-MmDQEBQ"
-
 @pytest.fixture
 def bot(event_loop):
     
-    with b.Bot() as bot:
-        bot.load_extensions()
-        bot.start(token, reconnect=True) # However you create your bot, make sure to use loop=event_loop
+    with b.Bot() as bot: # However you create your bot, make sure to use loop=event_loop
         dpytest.configure(bot)
         return bot
 
