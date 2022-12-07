@@ -6,6 +6,7 @@ import sys
 sys.path.append('OneBot/src')
 
 import bot as b
+
 @pytest.fixture
 def bot(event_loop):
     
