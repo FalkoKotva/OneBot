@@ -3,14 +3,15 @@ import discord.ext.test as dpytest
 
 import sys
 # caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.append('OneBot/src')
+sys.path.append('../src')
 
-import bot as b
+from bot import Bot
 
 @pytest.fixture
 def bot(event_loop):
     
-    with b.Bot() as bot: # However you create your bot, make sure to use loop=event_loop
+    with Bot() as bot: # However you create your bot, make sure to use loop=event_loop
+        
         dpytest.configure(bot)
         print("Hello")
         return bot
