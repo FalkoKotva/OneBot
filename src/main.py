@@ -3,7 +3,9 @@
 import asyncio
 
 from bot import Bot
+import timer
 
+@timer.timefunc
 async def main():
     """Main function for starting the application"""
 

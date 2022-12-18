@@ -19,7 +19,8 @@ from ._ext import CogManager
 
 log = logging.getLogger(__name__)
 
-
+import timer
+#@timer.timefunc
 class Bot(commands.Bot):
     """This class is the root of the bot."""
 
@@ -217,7 +218,7 @@ class Bot(commands.Bot):
             include_file=True
         )
         await super().close()
-
+    
     async def load_extensions(self):
         """Searches through the ./ext/ directory and loads them"""
 

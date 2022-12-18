@@ -1,29 +1,42 @@
+import discord
+import discord.ext.commands as commands
+from discord.ext.commands import Cog, command
 import pytest
+import pytest_asyncio
 import discord.ext.test as dpytest
 
-import sys
-# caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.append('../src')
 
-from bot import Bot
+class Misc(Cog):
+    @command()
+    async def ping(self, ctx):
+        await ctx.send("Pong !")
 
-@pytest.fixture
-def bot(event_loop):
-    
-    with Bot() as bot: # However you create your bot, make sure to use loop=event_loop
-        
-        dpytest.configure(bot)
-        print("Hello")
-        return bot
+    @command()
+    async def echo(self, ctx, text: str):
+        await ctx.send(text)
+
+
+@pytest_asyncio.fixture
+async def bot():
+    intents = discord.Intents.default()
+    intents.members = True
+    intents.message_content = True
+    b = commands.Bot(command_prefix="!",
+                     intents=intents)
+    await b._async_setup_hook()  # setup the loop
+    await b.add_cog(Misc())
+
+    dpytest.configure(b)
+    return b
 
 
 @pytest.mark.asyncio
 async def test_ping(bot):
     await dpytest.message("!ping")
-    assert dpytest.verify().message().contains().content("Ping:")
+    assert dpytest.verify().message().content("Pong !")
 
 
 @pytest.mark.asyncio
-async def test_foo(bot):
-    await dpytest.message("!hello")
-    assert dpytest.verify().message().content("Hello World!")
+async def test_echo(bot):
+    await dpytest.message("!echo Hello world")
+    assert dpytest.verify().message().contains().content("Hello")
